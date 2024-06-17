@@ -129,7 +129,8 @@ const getUserData = (nic) => {
     rupd.weight,
     rupd.address,
     rupd.personalityDescription,
-    rupd.alcoholConsumption
+    rupd.alcoholConsumption,
+    rupd.lookingFor
     FROM 
     users u
     LEFT JOIN 
@@ -524,6 +525,84 @@ const register_user_portfolio_data = async (req, res) => {
   });
 };
 
+const update_register_user_portfolio_data = async (req, res) => {
+  try {
+    // Extract token from the request headers
+    const token = req.headers.authorization;
+    
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized: No token provided" });
+    }
+
+    // Verify the token
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return res.status(401).json({ message: "Unauthorized: Invalid token" });
+    }
+
+    const userData = await getUserData(decoded.nic);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const userId = userData.id;
+    const formData = req.body;
+
+    // Update user portfolio data
+    const updateQuery = `
+      UPDATE register_user_portfolio_data 
+      SET 
+        firstName = ?,
+        lastName = ?,
+        whatsAppNumber = ?,
+        job = ?,
+        location = ?,
+        marriageStatus = ?,
+        heightFt = ?,
+        heightIn = ?,
+        weight = ?,
+        address = ?,
+        personalityDescription = ?,
+        alcoholConsumption = ?,
+        lookingFor = ?
+      WHERE userId = ?
+    `;
+
+    const updateValues = [
+      formData.firstName,
+      formData.lastName,
+      formData.whatsAppNumber,
+      formData.job,
+      formData.location,
+      formData.marriageStatus,
+      formData.heightFt,
+      formData.heightIn,
+      formData.weight,
+      formData.address,
+      formData.personalityDescription,
+      formData.alcoholConsumption,
+      formData.lookingFor,
+      userId,
+    ];
+
+    db.query(updateQuery, updateValues, (updateErr, updateResult) => {
+      if (updateErr) {
+        console.error("Error updating data: ", updateErr);
+        return res.status(500).json({ message: "Internal Server Error: Error updating data" });
+      }
+      if (updateResult.affectedRows === 0) {
+        return res.status(404).json({ message: "User portfolio not found" });
+      }
+      console.log("Data updated successfully");
+      return res.status(200).json({ message: "Data updated successfully" });
+    });
+  } catch (error) {
+    console.error("Unexpected error: ", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
 const getUserRegisterData = (userId) => {
   return new Promise((resolve, reject) => {
     db.query(
@@ -649,7 +728,8 @@ const getAllUsersToHomepage = async (req, res) => {
     rupd.weight,
     rupd.address,
     rupd.personalityDescription,
-    rupd.alcoholConsumption
+    rupd.alcoholConsumption,
+    rupd.lookingFor
     FROM 
     users u
     LEFT JOIN 
@@ -752,7 +832,7 @@ LEFT JOIN
 LEFT JOIN 
   register_user_portfolio_data rupd ON u.id = rupd.userId
   WHERE 
-  friends.friend_id = ? AND friendS.status = ?`;
+  friends.friend_id = ? AND friends.status = ?`;
 
   try {
     db.query(sql, [userId, "pending"], (err, results) => {
@@ -816,6 +896,7 @@ module.exports = {
   register_steps_user_data,
   user_terms_agree,
   register_user_portfolio_data,
+  update_register_user_portfolio_data,
   getUserData,
   verifyToken,
   getAllUsersToHomepage,
