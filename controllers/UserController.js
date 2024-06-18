@@ -624,9 +624,191 @@ const getUserRegisterData = (userId) => {
   });
 };
 
+// const getAllUsersToHomepage = async (req, res) => {
+//   try {
+   
+//     const token = req.headers.authorization;
+//     const decoded = verifyToken(token);
+//     if (!decoded) {
+//       return res.status(401).json({ message: "Unauthorized" });
+//     }
+
+//     const userData = await getUserData(decoded.nic);
+//     const userId = userData.id; // Extract the user ID from the user data
+//     const registerData = await getUserRegisterData(userId);
+//     const userGender = registerData.gender; // Extract the user's gender
+    
+//     const query = req.query.query || "";
+//     const location = req.query.location || "";
+
+//     let weight = "";
+//     let height = "";
+//     let marriageStatus = "";
+//     let age = "";
+
+//     // Check if weight, height, and marriageStatus are provided in the request
+//     if (req.query.weight !== undefined) {
+//       weight = req.query.weight;
+//     }
+//     if (req.query.height !== undefined) {
+//       height = req.query.height;
+//     }
+//     if (req.query.marriageStatus !== undefined) {
+//       marriageStatus = req.query.marriageStatus;
+//     }
+//     if (req.query.age !== undefined) {
+//       age = req.query.age;
+//     }
+     
+//     let ageLowerBound = "";
+//     let ageUpperBound = "";
+
+//     // Check if weight is provided in the request and split it into lower and upper bounds
+//     if (age) {
+//       const ageRange = age.split(" - ");
+//       if (ageRange.length === 2) {
+//         ageLowerBound = parseFloat(ageRange[0]);
+//         ageUpperBound = parseFloat(ageRange[1]);
+//       }
+//     }
+
+//     const heightParts = height.split(" - ");
+
+//     let firstHeightFt = 0;
+//     let firstHeightIn = 0;
+//     let secondHeightFt = 0;
+//     let secondHeightIn = 0;
+
+//     if (heightParts.length === 2) {
+//       // Parse the first part of the height string
+//       const firstHeight = heightParts[0].split(" ");
+
+//         const firstFtIn = firstHeight[0].split(".");
+//         firstHeightFt = parseInt(firstFtIn[0]);
+//         firstHeightIn = parseInt(firstFtIn[1]) || 0; // In case there's no fractional part
+      
+
+//       // Parse the second part of the height string
+//       const secondHeight = heightParts[1].split(" ");
+
+//         const secondFtIn = secondHeight[0].split(".");
+//         secondHeightFt = parseInt(secondFtIn[0]);
+//         secondHeightIn = parseInt(secondFtIn[1]) || 0; // In case there's no fractional part
+      
+//     }
+
+//     const sql = `
+//     SELECT 
+//     COALESCE(f.status, 'not friends') AS isFriend,
+//     hart.is_harting AS isHarting,
+//     u.id AS user_id,
+//     u.nic,
+//     u.online,
+//     u.created_at,
+//     u.updated_at,
+//     rsud.id AS rsud_id,
+//     rsud.userId AS rsud_userId,
+//     rsud.gender,
+//     rsud.age,
+//     rsud.birthday,
+//     rsud.interests,
+//     rsud.profilePic,
+//     rsud.otherImages,
+//     rsud.terms_agree,
+//     rupd.id AS rupd_id,
+//     rupd.userId AS rupd_userId,
+//     rupd.firstName,
+//     rupd.lastName,
+//     rupd.whatsAppNumber,
+//     rupd.job,
+//     rupd.location,
+//     rupd.marriageStatus,
+//     rupd.heightFt,
+//     rupd.heightIn,
+//     rupd.weight,
+//     rupd.address,
+//     rupd.personalityDescription,
+//     rupd.alcoholConsumption,
+//     rupd.lookingFor
+//     FROM 
+//     users u
+//     LEFT JOIN 
+//     register_steps_user_data rsud ON u.id = rsud.userId
+//     LEFT JOIN 
+//     friendships f ON u.id = f.friend_id AND f.user_id = ?
+//     LEFT JOIN 
+//     user_harting hart ON u.id = hart.friend_id AND hart.user_id = ?
+//     LEFT JOIN 
+//     register_user_portfolio_data rupd ON u.id = rupd.userId
+//     WHERE 
+//     u.id != ? AND rsud.gender != ? AND 
+//     (u.nic LIKE ? OR rsud.interests LIKE ? OR rupd.firstName LIKE ? OR rupd.lastName LIKE ?)
+//     ${location ? "AND rupd.location LIKE ?" : ""}
+//     ${weight? "AND rupd.weight LIKE ?" : ""}
+//     ${heightParts.length === 2 ? `
+//       AND (rupd.heightFt > ? OR (rupd.heightFt = ? AND rupd.heightIn >= ?))
+//       AND (rupd.heightFt < ? OR (rupd.heightFt = ? AND rupd.heightIn <= ?))
+//     ` : ""}
+//     ${marriageStatus ? "AND rupd.marriageStatus LIKE ?" : ""}
+//     ${age? "AND rsud.age >= ? AND rsud.age <= ? " : ""}
+//     `;
+
+//     let queryParams = [
+//       userId,
+//       userId,
+//       userId,
+//       userGender,
+//       `%${query}%`,
+//       `%${query}%`,
+//       `%${query}%`,
+//       `%${query}%`,
+//     ];
+
+//     // Add location parameter to queryParams if it's not empty
+//     if (location) {
+//       queryParams.push(`%${location}%`);
+//     }
+
+//     if (weight) {
+//       queryParams.push(weight);
+//     }
+
+//     // Add height parameters to queryParams if provided
+//     if (heightParts.length === 2) {
+//       queryParams.push(firstHeightFt);
+//       queryParams.push(firstHeightFt);
+//       queryParams.push(firstHeightIn);
+//       queryParams.push(secondHeightFt);
+//       queryParams.push(secondHeightFt);
+//       queryParams.push(secondHeightIn);
+//     }
+
+//     // Add marriageStatus parameter to queryParams if provided
+//     if (marriageStatus) {
+//       queryParams.push(`%${marriageStatus}%`);
+//     }
+    
+//     if (age) {
+//       queryParams.push(ageLowerBound);
+//       queryParams.push(ageUpperBound);
+//     }
+
+//     db.query(sql, queryParams, (err, results) => {
+//       if (err) {
+//         console.error("Error retrieving users: ", err);
+//         return res.status(500).json({ message: "Internal server error" });
+//       }
+
+//       res.status(200).json(results);
+//     });
+//   } catch (error) {
+//     console.error("Error: ", error);
+//     res.status(500).json({ message: "Internal server error" });
+//   }
+// };
+
 const getAllUsersToHomepage = async (req, res) => {
   try {
-    console.log(req.query);
     const token = req.headers.authorization;
     const decoded = verifyToken(token);
     if (!decoded) {
@@ -634,36 +816,22 @@ const getAllUsersToHomepage = async (req, res) => {
     }
 
     const userData = await getUserData(decoded.nic);
-    const userId = userData.id; // Extract the user ID from the user data
+    const userId = userData.id;
     const registerData = await getUserRegisterData(userId);
-    const userGender = registerData.gender; // Extract the user's gender
+    const userGender = registerData.gender;
 
     const query = req.query.query || "";
     const location = req.query.location || "";
+    const weight = req.query.weight || "";
+    const height = req.query.height || "";
+    const marriageStatus = req.query.marriageStatus || "";
+    const age = req.query.age || "";
+    const limit = parseInt(req.query.limit) || 15; // Default limit to 15 if not provided
+    const offset = parseInt(req.query.offset) || 0; // Default offset to 0 if not provided
 
-    let weight = "";
-    let height = "";
-    let marriageStatus = "";
-    let age = "";
-
-    // Check if weight, height, and marriageStatus are provided in the request
-    if (req.query.weight !== undefined) {
-      weight = req.query.weight;
-    }
-    if (req.query.height !== undefined) {
-      height = req.query.height;
-    }
-    if (req.query.marriageStatus !== undefined) {
-      marriageStatus = req.query.marriageStatus;
-    }
-    if (req.query.age !== undefined) {
-      age = req.query.age;
-    }
-     
     let ageLowerBound = "";
     let ageUpperBound = "";
 
-    // Check if weight is provided in the request and split it into lower and upper bounds
     if (age) {
       const ageRange = age.split(" - ");
       if (ageRange.length === 2) {
@@ -673,28 +841,18 @@ const getAllUsersToHomepage = async (req, res) => {
     }
 
     const heightParts = height.split(" - ");
-
-    let firstHeightFt = 0;
-    let firstHeightIn = 0;
-    let secondHeightFt = 0;
-    let secondHeightIn = 0;
+    let firstHeightFt = 0, firstHeightIn = 0, secondHeightFt = 0, secondHeightIn = 0;
 
     if (heightParts.length === 2) {
-      // Parse the first part of the height string
       const firstHeight = heightParts[0].split(" ");
+      const firstFtIn = firstHeight[0].split(".");
+      firstHeightFt = parseInt(firstFtIn[0]);
+      firstHeightIn = parseInt(firstFtIn[1]) || 0;
 
-        const firstFtIn = firstHeight[0].split(".");
-        firstHeightFt = parseInt(firstFtIn[0]);
-        firstHeightIn = parseInt(firstFtIn[1]) || 0; // In case there's no fractional part
-      
-
-      // Parse the second part of the height string
       const secondHeight = heightParts[1].split(" ");
-
-        const secondFtIn = secondHeight[0].split(".");
-        secondHeightFt = parseInt(secondFtIn[0]);
-        secondHeightIn = parseInt(secondFtIn[1]) || 0; // In case there's no fractional part
-      
+      const secondFtIn = secondHeight[0].split(".");
+      secondHeightFt = parseInt(secondFtIn[0]);
+      secondHeightIn = parseInt(secondFtIn[1]) || 0;
     }
 
     const sql = `
@@ -744,13 +902,14 @@ const getAllUsersToHomepage = async (req, res) => {
     u.id != ? AND rsud.gender != ? AND 
     (u.nic LIKE ? OR rsud.interests LIKE ? OR rupd.firstName LIKE ? OR rupd.lastName LIKE ?)
     ${location ? "AND rupd.location LIKE ?" : ""}
-    ${weight? "AND rupd.weight LIKE ?" : ""}
+    ${weight ? "AND rupd.weight LIKE ?" : ""}
     ${heightParts.length === 2 ? `
       AND (rupd.heightFt > ? OR (rupd.heightFt = ? AND rupd.heightIn >= ?))
       AND (rupd.heightFt < ? OR (rupd.heightFt = ? AND rupd.heightIn <= ?))
     ` : ""}
     ${marriageStatus ? "AND rupd.marriageStatus LIKE ?" : ""}
-    ${age? "AND rsud.age >= ? AND rsud.age <= ? " : ""}
+    ${age ? "AND rsud.age >= ? AND rsud.age <= ?" : ""}
+    LIMIT ? OFFSET ?
     `;
 
     let queryParams = [
@@ -764,34 +923,16 @@ const getAllUsersToHomepage = async (req, res) => {
       `%${query}%`,
     ];
 
-    // Add location parameter to queryParams if it's not empty
-    if (location) {
-      queryParams.push(`%${location}%`);
-    }
-
-    if (weight) {
-      queryParams.push(weight);
-    }
-
-    // Add height parameters to queryParams if provided
+    if (location) queryParams.push(`%${location}%`);
+    if (weight) queryParams.push(weight);
     if (heightParts.length === 2) {
-      queryParams.push(firstHeightFt);
-      queryParams.push(firstHeightFt);
-      queryParams.push(firstHeightIn);
-      queryParams.push(secondHeightFt);
-      queryParams.push(secondHeightFt);
-      queryParams.push(secondHeightIn);
+      queryParams.push(firstHeightFt, firstHeightFt, firstHeightIn, secondHeightFt, secondHeightFt, secondHeightIn);
     }
-
-    // Add marriageStatus parameter to queryParams if provided
-    if (marriageStatus) {
-      queryParams.push(`%${marriageStatus}%`);
-    }
-    
+    if (marriageStatus) queryParams.push(`%${marriageStatus}%`);
     if (age) {
-      queryParams.push(ageLowerBound);
-      queryParams.push(ageUpperBound);
+      queryParams.push(ageLowerBound, ageUpperBound);
     }
+    queryParams.push(limit, offset);
 
     db.query(sql, queryParams, (err, results) => {
       if (err) {
