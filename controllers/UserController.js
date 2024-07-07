@@ -95,6 +95,9 @@ const getUser = async (req, res) => {
   try {
     // Retrieve user data based on the NIC number (using await)
     const userData = await getUserData(decoded.nic);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
     // Send user data in the response
     res.json(userData);
   } catch (err) {
@@ -307,6 +310,9 @@ const register_steps_user_data = async (req, res) => {
   }
 
   const userData = await getUserData(decoded.nic);
+  if (!userData) {
+    return res.status(404).json({ message: "User not found" });
+  }
   const userId = userData["id"];
 
   // Extract the remaining data from the request body
@@ -390,6 +396,9 @@ const user_terms_agree = async (req, res) => {
   }
 
   const userData = await getUserData(decoded.nic);
+  if (!userData) {
+    return res.status(404).json({ message: "User not found" });
+  }
   const userId = userData["id"];
 
   const { terms_agree } = req.body;
@@ -424,6 +433,9 @@ const register_user_portfolio_data = async (req, res) => {
   }
 
   const userData = await getUserData(decoded.nic);
+  if (!userData) {
+    return res.status(404).json({ message: "User not found" });
+  }
   const userId = userData["id"];
 
   const formData = req.body;
@@ -816,6 +828,9 @@ const getAllUsersToHomepage = async (req, res) => {
     }
 
     const userData = await getUserData(decoded.nic);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
     const userId = userData.id;
     const registerData = await getUserRegisterData(userId);
     const userGender = registerData.gender;
@@ -857,6 +872,7 @@ const getAllUsersToHomepage = async (req, res) => {
 
     const sql = `
     SELECT 
+    COALESCE(f.status, 'not friends') AS isFriendValue,
     COALESCE(f.status, 'not friends') AS isFriend,
     hart.is_harting AS isHarting,
     u.id AS user_id,
@@ -909,6 +925,7 @@ const getAllUsersToHomepage = async (req, res) => {
     ` : ""}
     ${marriageStatus ? "AND rupd.marriageStatus LIKE ?" : ""}
     ${age ? "AND rsud.age >= ? AND rsud.age <= ?" : ""}
+    ORDER BY u.created_at DESC
     LIMIT ? OFFSET ?
     `;
 
@@ -939,6 +956,7 @@ const getAllUsersToHomepage = async (req, res) => {
         console.error("Error retrieving users: ", err);
         return res.status(500).json({ message: "Internal server error" });
       }
+     
       res.status(200).json(results);
     });
   } catch (error) {
@@ -956,6 +974,9 @@ const getUserFriendsPendinglistData = async (req, res) => {
   }
 
   const userData = await getUserData(decoded.nic);
+  if (!userData) {
+    return res.status(404).json({ message: "User not found" });
+  }
   const userId = userData.id;
 
   const sql = `SELECT 
@@ -997,6 +1018,9 @@ const getUserFriendslistData = async (req, res) => {
   }
 
   const userData = await getUserData(decoded.nic);
+  if (!userData) {
+    return res.status(404).json({ message: "User not found" });
+  }
   const userId = userData.id;
 
   const sql = `SELECT 

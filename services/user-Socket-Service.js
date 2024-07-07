@@ -457,8 +457,44 @@ module.exports = function (io, db, users) {
         handleError(error);
       }
     });
+    
 
-    socket.on("addFriend", async ({ userId, friendId, isFriend }) => {
+    socket.on('addFriendAutoForMessage', async ({ userId, friendId }) => {
+    
+      const friendsSql = "SELECT * FROM friendships WHERE user_id = ? AND friend_id = ?";
+      
+      db.query(friendsSql, [userId, friendId], async (err, friendsResults) => {
+        if (err) {
+          console.error("Database error:", err);
+          socket.emit("error", { message: "Internal server error" });
+          return;
+        }
+  
+        if (friendsResults.length > 0) {
+          console.log("Friendship record already exists. No action taken.");
+          return;
+        }
+  
+        const query = 
+          "INSERT INTO friendships (user_id, friend_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)";
+        const params = [
+          userId,
+          friendId,
+          "pending",
+          new Date(),
+          new Date()
+        ];
+  
+        db.query(query, params, (err, result) => {
+          if (err) {
+            console.error("Database error:", err);
+            return;
+          }
+        });
+      });
+    });
+
+    socket.on("addFriend", async ({ userId, friendId, isFriend, unfriend }) => {
       console.log(
         `Processing friendship for user ${userId} and friend ${friendId}, isFriend: ${isFriend}`
       );
@@ -530,8 +566,20 @@ module.exports = function (io, db, users) {
                           });
                           return;
                         }
-                        io.to(users[userId]).emit("friendsRequestResponse", { id:0, userId, friendId, status:'Reject'});
-                        io.to(users[friendId]).emit("friendsRequestResponse", { id:0, userId, friendId, status:'Reject'});
+                        io.to(users[userId]).emit("friendsRequestResponse", {
+                          id: 0,
+                          userId,
+                          friendId,
+                          status: "Reject",
+                          unfriend: unfriend ?? ''
+                        });
+                        io.to(users[friendId]).emit("friendsRequestResponse", {
+                          id: 0,
+                          userId,
+                          friendId,
+                          status: "Reject",
+                          unfriend: unfriend ?? ''
+                        });
 
                         console.log(
                           `Friendship records deleted successfully for user ${userId} and friend ${friendId}`
@@ -575,8 +623,17 @@ module.exports = function (io, db, users) {
                             });
                             return;
                           }
-                          io.to(users[userId]).emit("friendsRequestResponse", { id:0, userId, friendId, status:'Accept'});
-                          io.to(users[friendId]).emit("friendsRequestResponse", { id:0, userId, friendId, status:'Accept'});
+                          io.to(users[userId]).emit("friendsRequestResponse", {
+                            id: 0,
+                            userId,
+                            friendId,
+                            status: "Accept",
+                            unfriend: unfriend ?? ''
+                          });
+                          io.to(users[friendId]).emit(
+                            "friendsRequestResponse",
+                            { id: 0, userId, friendId, status: "Accept", unfriend: unfriend ?? '' }
+                          );
                           console.log(
                             `Friendship records updated successfully for user ${userId} and friend ${friendId}`
                           );
@@ -609,6 +666,7 @@ module.exports = function (io, db, users) {
                 const userSql = `
                     SELECT 
 r.firstName AS friendrequestAddedfname,
+r.userId AS friendrequestAddedfId,
                       u.online,
                       rsud.profilePic,
                       rupd.firstName,
@@ -639,7 +697,8 @@ r.firstName AS friendrequestAddedfname,
                     // Structure the emitted data in the required format
                     const emittedData = {
                       online: userData.online,
-                      friendrequestAddedfname:userData.friendrequestAddedfname,
+                      friendrequestAddedfname: userData.friendrequestAddedfname,
+                      friendrequestAddedfId: userData.friendrequestAddedfId,
                       profilePic: userData.profilePic,
                       firstName: userData.firstName,
                       lastName: userData.lastName,
@@ -688,6 +747,7 @@ r.firstName AS friendrequestAddedfname,
     // Assuming you have a Socket.io server set up in your Node.js app
 
     socket.on("addHarting", async (data) => {
+      console.log(data);
       try {
         // Extract data from the incoming socket event
         const { userId, friendId, isHarting } = data;
@@ -748,6 +808,7 @@ r.firstName AS friendrequestAddedfname,
             const nic = row.nic;
             const online = row.online;
             const firstName = row.firstName;
+            const hartAddedfname = row.hartAddedfname;
             const lastName = row.lastName;
             const profilePic = row.profilePic;
             const age = row.age;
@@ -769,28 +830,41 @@ r.firstName AS friendrequestAddedfname,
             // console.log("Friend ID:", friendId);
             // console.log("Is Harting:", isHarting);
             // console.log("Created At:", createdAt);
-            io.to(users[userId]).emit("hartingadded", {
-              nic,
-              online,
-              firstName,
-              lastName,
-              profilePic,
-              age,
-              gender,
-              hartingId,
-              friendId,
-              isHarting,
-              createdAt,
-            });
+
+            const socketId = users[userId];
+            if (socketId) {
+              io.to(socketId).emit("hartingadded", {
+                nic,
+                online,
+                firstName,
+                lastName,
+                profilePic,
+                age,
+                gender,
+                hartingId,
+                friendId,
+                isHarting,
+                createdAt,
+              });
+              console.log(`Emitted to socket ID: ${socketId}`);
+            } else {
+              console.error(`No socket found for userId: ${userId}`);
+            }
+
+            const friendSocketId = users[friendId];
+            if (friendSocketId) {
+              io.to(friendSocketId).emit("hartingadded", {
+                userId,
+                friendId,
+                isHarting,
+                hartAddedfname,
+              });
+              console.log(`Emitted to friend socket ID: ${friendSocketId}`);
+            } else {
+              console.error(`No socket found for friendId: ${friendId}`);
+            }
           }
         });
-        io.to(users[friendId]).emit("hartingadded", {
-          userId,
-          friendId,
-          isHarting,
-        });
-        // Emit an acknowledgment back to the client if needed
-        // socket.emit('hartingAdded', { success: true });
       } catch (error) {
         // Handle errors by logging them
         console.error("Error handling harting:", error);
@@ -856,24 +930,29 @@ r.firstName AS friendrequestAddedfname,
         handleError(error, socket);
       }
     });
-    
+
     socket.on("Unfriendfriends", (data) => {
       const { id, userId, friendId, status } = data;
       try {
         if (status === "Reject") {
-          const deleteSql = "DELETE FROM `friendships` WHERE (`user_id` = ? AND `friend_id` = ?) OR (`user_id` = ? AND `friend_id` = ?)";
-          db.query(deleteSql, [userId, friendId, friendId, userId], (err, result) => {
-            if (err) {
-              handleError(err, socket);
-              // Handle error response to client
-            } else {
-              console.log(
-                `Friend request with ID ${id} rejected and deleted successfully`
-              );
-              io.to(users[userId]).emit("friendsRequestResponse", data);
-              io.to(users[friendId]).emit("friendsRequestResponse", data);
+          const deleteSql =
+            "DELETE FROM `friendships` WHERE (`user_id` = ? AND `friend_id` = ?) OR (`user_id` = ? AND `friend_id` = ?)";
+          db.query(
+            deleteSql,
+            [userId, friendId, friendId, userId],
+            (err, result) => {
+              if (err) {
+                handleError(err, socket);
+                // Handle error response to client
+              } else {
+                console.log(
+                  `Friend request with ID ${id} rejected and deleted successfully`
+                );
+                io.to(users[userId]).emit("friendsRequestResponse", { id, userId, friendId, status, 'unfriend':'unfriend' });
+                io.to(users[friendId]).emit("friendsRequestResponse", { id, userId, friendId, status, 'unfriend':'unfriend' });
+              }
             }
-          });
+          );
         }
       } catch (error) {
         handleError(error, socket);
@@ -882,17 +961,16 @@ r.firstName AS friendrequestAddedfname,
 
     socket.on("disconnect", () => {
       try {
-        for (const userId in users) {
-          if (users[userId] === socket.id) {
-            delete users[userId];
-            console.log(`User ${userId} disconnected`);
-            io.emit("onlineStatus", { userId, isOnline: false });
-
-            // Update user's online status in the database
-            updateUserOnlineStatus(userId, false);
-            break;
-          }
-        }
+        // for (const userId in users) {
+        //   if (users[userId] === socket.id) {
+        //     delete users[userId];
+        //     console.log(`User ${userId} disconnected`);
+        //     io.emit("onlineStatus", { userId, isOnline: false });
+        //     // Update user's online status in the database
+        //     updateUserOnlineStatus(userId, false);
+        //     break;
+        //   }
+        // }
       } catch (error) {
         handleError(error);
       }
@@ -993,7 +1071,6 @@ r.firstName AS friendrequestAddedfname,
           return;
         }
         const count = results[0].count;
-        console.log(count);
         io.to(users[userId]).emit("unseenMessagesCount", count);
       });
     } catch (error) {
