@@ -385,6 +385,42 @@ const register_steps_user_data = async (req, res) => {
   });
 };
 
+const update_user_nic_images = async (req, res) => {
+  // Extract token from the request headers
+  const token = req.headers.authorization;
+
+  // Verify the token
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userData = await getUserData(decoded.nic);
+  if (!userData) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  const userId = userData["id"];
+
+
+  const { frontImage, backImage } = req.body;
+
+  
+
+  const sql = `UPDATE register_steps_user_data SET nicFrontImage =?, nicBackImage=? WHERE userId = ?`;
+  db.query(sql, [frontImage, backImage, userId], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "User Nic Data updated successfully" });
+  });
+};
+
 const user_terms_agree = async (req, res) => {
   // Extract token from the request headers
   const token = req.headers.authorization;
@@ -1068,4 +1104,5 @@ module.exports = {
   getUserFriendsPendinglistData,
   getUserFriendslistData,
   getHartingList,
+  update_user_nic_images
 };
