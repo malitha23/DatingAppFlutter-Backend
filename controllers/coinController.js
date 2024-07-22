@@ -1,5 +1,6 @@
 const moment = require('moment-timezone');
 const database = require("../config/db");
+const fetch = require("node-fetch"); 
 const { verifyToken, getUserData } = require("./UserController");
 
 const db = database.connection;
@@ -101,6 +102,15 @@ const insertFreePackageOneMonth = async (req, res) => {
     //  return res.status(404).json({ message: "User not found" });
   }
   const userId = userData["id"];
+  const  whatsAppNumber  = userData["whatsAppNumber"];
+  const formattedPhoneNumber = formatPhoneNumber(whatsAppNumber);
+
+  // Check if `whatsAppNumber` exists and is of valid length
+  if (!whatsAppNumber || whatsAppNumber.length !== 10) {
+    return res
+      .status(404)
+      .json({ message: "User phone number not found or invalid" });
+  }
 
   // Get the current timestamp for created_at and updated_at in Sri Lanka time
   const currentTimestamp = moment
@@ -148,7 +158,7 @@ const insertFreePackageOneMonth = async (req, res) => {
     
     try {
       // Update user key
-      await updateKey(userId, generatedKey);
+      await updateKey(userId, generatedKey, formattedPhoneNumber);
 
     //  console.log("Insert successful:", results);
     //  return res.status(200).json({ message: "Insert successful", data: results });
@@ -159,8 +169,28 @@ const insertFreePackageOneMonth = async (req, res) => {
   });
 };
  
-const updateKey = async (userId, newKey) => {
-  console.log(newKey); // Ensure newKey is correctly logged here
+const formatPhoneNumber = (phoneNumber) => {
+  // Remove any non-digit characters
+  let cleaned = ('' + phoneNumber).replace(/\D/g, '');
+
+  // Check if the number starts with '0' and remove it
+  if (cleaned.startsWith('0')) {
+    cleaned = cleaned.substring(1);
+  }
+
+  // Ensure the phone number is 10 digits long after removing the leading zero
+  if (cleaned.length !== 9) {
+    throw new Error('Invalid phone number length');
+  }
+
+  // Add international dialing code prefix (e.g., 94 for Sri Lanka)
+  const formattedNumber = `94${cleaned}`;
+
+  return formattedNumber;
+};
+
+const updateKey = async (userId, newKey, formattedPhoneNumber) => {
+
   const updateQuery = `
     UPDATE users
     SET generatedKey = ?
@@ -172,12 +202,37 @@ const updateKey = async (userId, newKey) => {
     userId
   ];
 
-  db.query(updateQuery, updateValues, (err, result) => {
+  db.query(updateQuery, updateValues, async (err, result) => {
     if (err) {
       console.error('Error updating key:', err);
       throw err;
     }
- //   console.log('Key updated successfully:', result);
+      // Send OTP via Notify.lk
+      const message = `Welcome to LOVEBIRDS. Your registration code is ${newKey}`;
+      const notifyURL = `https://app.notify.lk/api/v1/send?user_id=${
+        process.env.NOTIFY_LK_USER_ID
+      }&api_key=${process.env.NOTIFY_LK_API_KEY}&sender_id=${
+        process.env.NOTIFY_LK_SENDER_ID
+      }&to=${formattedPhoneNumber}&message=${encodeURIComponent(
+        message
+      )}`;
+
+      try {
+        const response = await fetch(notifyURL);
+
+        // Check if the response status is OK
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.log(errorText);
+        }
+
+        // Optionally parse JSON response if needed
+        const responseData = await response.json();
+        console.log('Notify.lk Response:', responseData);
+      } catch (fetchError) {
+        console.log(fetchError);
+     
+      }
   });
 };
 

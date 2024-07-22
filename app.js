@@ -5,6 +5,8 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cron = require("node-cron");
 const socketService = require("./services/user-Socket-Service");
+const authMiddleware = require('./middlewares/authMiddleware.js');
+const bodyParser = require('body-parser');
 
 dotenv.config();
 const app = express();
@@ -18,14 +20,21 @@ const port = process.env.PORT || 3000;
 const authRoute = require("./routes/user");
 const authRoutecoins = require("./routes/coins");
 const authRoutePackages = require("./routes/packages");
+const authRouteAdmin= require("./routes/admin");
+const authRouteForgetpassword = require("./routes/forgetpassword");
 
 app.get("/", (req, res) => res.send("Hello World!"));
 app.use("/api/user", authRoute);
 app.use("/api/coins", authRoutecoins);
 app.use("/api/packages", authRoutePackages);
+app.use(bodyParser.json());
+app.use("/api/forgetpassword", authRouteForgetpassword);
+app.use(authMiddleware);
+app.use("/api/admin", authRouteAdmin);
 
 const database = require("./config/db");
 const db = database.connection;
+
 const users = {}; // Track online users
 
 

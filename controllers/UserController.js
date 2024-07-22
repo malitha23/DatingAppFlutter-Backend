@@ -59,9 +59,7 @@ const register = async (req, res) => {
                 }
 
                 // Generate JWT token
-                const token = jwt.sign({ nic: nic }, "lovebrids2024", {
-                  expiresIn: "1h",
-                });
+                const token = jwt.sign({ nic: nic }, "lovebrids2024");
 
                 // Send response with user data and token
                 res.status(200).json({
@@ -182,11 +180,10 @@ const login = async (req, res) => {
     }
 
     // Generate JWT token on successful login
-    const token = jwt.sign({ nic: user.nic }, "lovebrids2024", {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign({ nic: user.nic }, "lovebrids2024");
 
     // Send response with token
+    console.log(token);
     res.status(200).json({ message: "Login successful", token, user });
   } catch (err) {
     console.error(err);
@@ -401,10 +398,7 @@ const update_user_nic_images = async (req, res) => {
   }
   const userId = userData["id"];
 
-
   const { frontImage, backImage } = req.body;
-
-  
 
   const sql = `UPDATE register_steps_user_data SET nicFrontImage =?, nicBackImage=? WHERE userId = ?`;
   db.query(sql, [frontImage, backImage, userId], (err, result) => {
@@ -475,22 +469,40 @@ const register_user_portfolio_data = async (req, res) => {
   const userId = userData["id"];
 
   const formData = req.body;
+  const pno = formData.whatsAppNumber;
 
-  // Check if a record with the given userId already exists
-  const checkQuery = `
+  // Check if the WhatsApp number already exists in the register_user_portfolio_data table
+  const checkQueryfirst =
+    "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ?";
+  db.query(checkQueryfirst, [pno], (err, results) => {
+    if (err) {
+      return res
+        .status(500)
+        .json({ message: "Database query error", error: err });
+    }
+
+    if (results.length > 0) {
+      // WhatsApp number already exists
+      return res
+        .status(409)
+        .json({ message: "WhatsApp number already exists" });
+    }
+
+    // Check if a record with the given userId already exists
+    const checkQuery = `
     SELECT * FROM register_user_portfolio_data WHERE userId = ?
   `;
 
-  db.query(checkQuery, [userId], (checkErr, checkResult) => {
-    if (checkErr) {
-      console.error("Error checking data: ", checkErr);
-      res.status(500).send("Error checking data");
-      return;
-    }
+    db.query(checkQuery, [userId], (checkErr, checkResult) => {
+      if (checkErr) {
+        console.error("Error checking data: ", checkErr);
+        res.status(500).send("Error checking data");
+        return;
+      }
 
-    if (checkResult && checkResult.length > 0) {
-      // Record exists, perform update
-      const updateQuery = `
+      if (checkResult && checkResult.length > 0) {
+        // Record exists, perform update
+        const updateQuery = `
         UPDATE register_user_portfolio_data 
         SET 
           firstName = ?,
@@ -509,67 +521,68 @@ const register_user_portfolio_data = async (req, res) => {
         WHERE userId = ?
       `;
 
-      const updateValues = [
-        formData.firstName,
-        formData.lastName,
-        formData.whatsAppNumber,
-        formData.job,
-        formData.location,
-        formData.marriageStatus,
-        formData.heightFt,
-        formData.heightIn,
-        formData.weight,
-        formData.address,
-        formData.personalityDescription,
-        formData.alcoholConsumption,
-        formData.lookingFor,
-        userId,
-      ];
+        const updateValues = [
+          formData.firstName,
+          formData.lastName,
+          formData.whatsAppNumber,
+          formData.job,
+          formData.location,
+          formData.marriageStatus,
+          formData.heightFt,
+          formData.heightIn,
+          formData.weight,
+          formData.address,
+          formData.personalityDescription,
+          formData.alcoholConsumption,
+          formData.lookingFor,
+          userId,
+        ];
 
-      db.query(updateQuery, updateValues, (updateErr, updateResult) => {
-        if (updateErr) {
-          console.error("Error updating data: ", updateErr);
-          res.status(500).send("Error updating data");
-          return;
-        }
-        console.log("Data updated successfully");
-        res.status(200).send("Data updated successfully");
-      });
-    } else {
-      // Record does not exist, perform insert
-      const insertQuery = `
+        db.query(updateQuery, updateValues, (updateErr, updateResult) => {
+          if (updateErr) {
+            console.error("Error updating data: ", updateErr);
+            res.status(500).send("Error updating data");
+            return;
+          }
+          console.log("Data updated successfully");
+          res.status(200).send("Data updated successfully");
+        });
+      } else {
+        // Record does not exist, perform insert
+        const insertQuery = `
         INSERT INTO register_user_portfolio_data (
           userId, firstName, lastName, whatsAppNumber, job, location, marriageStatus, heightFt, heightIn, weight, address, personalityDescription, alcoholConsumption, lookingFor
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
-      const insertValues = [
-        userId,
-        formData.firstName,
-        formData.lastName,
-        formData.whatsAppNumber,
-        formData.job,
-        formData.location,
-        formData.marriageStatus,
-        formData.heightFt,
-        formData.heightIn,
-        formData.weight,
-        formData.address,
-        formData.personalityDescription,
-        formData.alcoholConsumption,
-        formData.lookingFor,
-      ];
+        const insertValues = [
+          userId,
+          formData.firstName,
+          formData.lastName,
+          formData.whatsAppNumber,
+          formData.job,
+          formData.location,
+          formData.marriageStatus,
+          formData.heightFt,
+          formData.heightIn,
+          formData.weight,
+          formData.address,
+          formData.personalityDescription,
+          formData.alcoholConsumption,
+          formData.lookingFor,
+        ];
 
-      db.query(insertQuery, insertValues, (insertErr, insertResult) => {
-        if (insertErr) {
-          console.error("Error inserting data: ", insertErr);
-          res.status(500).send("Error inserting data");
-          return;
-        }
-        console.log("Data inserted successfully");
-        res.status(200).send("Data inserted successfully");
-      });
-    }
+        db.query(insertQuery, insertValues, (insertErr, insertResult) => {
+          if (insertErr) {
+            console.error("Error inserting data: ", insertErr);
+            res.status(500).send("Error inserting data");
+            return;
+          }
+          console.log("Data inserted successfully");
+          res.status(200).send("Data inserted successfully");
+        });
+      }
+    });
   });
 };
 
@@ -577,9 +590,11 @@ const update_register_user_portfolio_data = async (req, res) => {
   try {
     // Extract token from the request headers
     const token = req.headers.authorization;
-    
+
     if (!token) {
-      return res.status(401).json({ message: "Unauthorized: No token provided" });
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: No token provided" });
     }
 
     // Verify the token
@@ -636,7 +651,9 @@ const update_register_user_portfolio_data = async (req, res) => {
     db.query(updateQuery, updateValues, (updateErr, updateResult) => {
       if (updateErr) {
         console.error("Error updating data: ", updateErr);
-        return res.status(500).json({ message: "Internal Server Error: Error updating data" });
+        return res
+          .status(500)
+          .json({ message: "Internal Server Error: Error updating data" });
       }
       if (updateResult.affectedRows === 0) {
         return res.status(404).json({ message: "User portfolio not found" });
@@ -649,7 +666,6 @@ const update_register_user_portfolio_data = async (req, res) => {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
 
 const getUserRegisterData = (userId) => {
   return new Promise((resolve, reject) => {
@@ -672,7 +688,6 @@ const getUserRegisterData = (userId) => {
   });
 };
 
-
 const getAllUsersToHomepage = async (req, res) => {
   try {
     const token = req.headers.authorization;
@@ -690,6 +705,9 @@ const getAllUsersToHomepage = async (req, res) => {
     const userGender = registerData.gender;
 
     const query = req.query.query || "";
+    const generatedKey = req.query.generatedKey || "";
+    const plan_name = req.query.plan_name || "";
+    const payment_status = req.query.payment_status || "";
     const location = req.query.location || "";
     const weight = req.query.weight || "";
     const height = req.query.height || "";
@@ -710,7 +728,10 @@ const getAllUsersToHomepage = async (req, res) => {
     }
 
     const heightParts = height.split(" - ");
-    let firstHeightFt = 0, firstHeightIn = 0, secondHeightFt = 0, secondHeightIn = 0;
+    let firstHeightFt = 0,
+      firstHeightIn = 0,
+      secondHeightFt = 0,
+      secondHeightIn = 0;
 
     if (heightParts.length === 2) {
       const firstHeight = heightParts[0].split(" ");
@@ -730,8 +751,10 @@ const getAllUsersToHomepage = async (req, res) => {
     COALESCE(f.status, 'not friends') AS isFriend,
     hart.is_harting AS isHarting,
     u.id AS user_id,
+    u.generatedKey,
     u.nic,
     u.online,
+    u.status,
     u.created_at,
     u.updated_at,
     rsud.id AS rsud_id,
@@ -743,6 +766,8 @@ const getAllUsersToHomepage = async (req, res) => {
     rsud.profilePic,
     rsud.otherImages,
     rsud.terms_agree,
+    rsud.nicFrontImage,
+    rsud.nicBackImage,
     rupd.id AS rupd_id,
     rupd.userId AS rupd_userId,
     rupd.firstName,
@@ -757,11 +782,21 @@ const getAllUsersToHomepage = async (req, res) => {
     rupd.address,
     rupd.personalityDescription,
     rupd.alcoholConsumption,
-    rupd.lookingFor
+    rupd.lookingFor,
+    pkbd.price as packagePrice,
+    pkbd.duration as packageDurationMonth,
+    pkbd.packageStartDate,
+    pkbd.packageStartEnd as packageEndDate,
+    pkbd.plan_name,
+    pkbd.payment_date,
+    pkbd.payment_date,
+    pkbd.payment_status
     FROM 
     users u
     LEFT JOIN 
     register_steps_user_data rsud ON u.id = rsud.userId
+    LEFT JOIN 
+    packagesbuydata pkbd ON u.id = pkbd.userId
     LEFT JOIN 
     friendships f ON u.id = f.friend_id AND f.user_id = ?
     LEFT JOIN 
@@ -772,11 +807,18 @@ const getAllUsersToHomepage = async (req, res) => {
     u.id != ? AND rsud.gender != ? AND 
     (u.nic LIKE ? OR rsud.interests LIKE ? OR rupd.firstName LIKE ? OR rupd.lastName LIKE ?)
     ${location ? "AND rupd.location LIKE ?" : ""}
+    ${generatedKey ? "AND u.generatedKey LIKE ?" : ""}
+    ${plan_name ? "AND pkbd.plan_name LIKE ?" : ""}
+    ${payment_status ? "AND pkbd.payment_status LIKE ?" : ""}
     ${weight ? "AND rupd.weight LIKE ?" : ""}
-    ${heightParts.length === 2 ? `
+    ${
+      heightParts.length === 2
+        ? `
       AND (rupd.heightFt > ? OR (rupd.heightFt = ? AND rupd.heightIn >= ?))
       AND (rupd.heightFt < ? OR (rupd.heightFt = ? AND rupd.heightIn <= ?))
-    ` : ""}
+    `
+        : ""
+    }
     ${marriageStatus ? "AND rupd.marriageStatus LIKE ?" : ""}
     ${age ? "AND rsud.age >= ? AND rsud.age <= ?" : ""}
     ORDER BY u.created_at DESC
@@ -795,9 +837,19 @@ const getAllUsersToHomepage = async (req, res) => {
     ];
 
     if (location) queryParams.push(`%${location}%`);
+    if (generatedKey) queryParams.push(`%${generatedKey}%`);
+    if (plan_name) queryParams.push(`%${plan_name}%`);
+    if (payment_status) queryParams.push(`%${payment_status}%`);
     if (weight) queryParams.push(weight);
     if (heightParts.length === 2) {
-      queryParams.push(firstHeightFt, firstHeightFt, firstHeightIn, secondHeightFt, secondHeightFt, secondHeightIn);
+      queryParams.push(
+        firstHeightFt,
+        firstHeightFt,
+        firstHeightIn,
+        secondHeightFt,
+        secondHeightFt,
+        secondHeightIn
+      );
     }
     if (marriageStatus) queryParams.push(`%${marriageStatus}%`);
     if (age) {
@@ -810,7 +862,7 @@ const getAllUsersToHomepage = async (req, res) => {
         console.error("Error retrieving users: ", err);
         return res.status(500).json({ message: "Internal server error" });
       }
-     console.log(results);
+     
       res.status(200).json(results);
     });
   } catch (error) {
@@ -818,7 +870,6 @@ const getAllUsersToHomepage = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 const getUserFriendsPendinglistData = async (req, res) => {
   const token = req.headers.authorization;
@@ -892,7 +943,7 @@ LEFT JOIN
 LEFT JOIN 
   register_user_portfolio_data rupd ON u.id = rupd.userId
   WHERE 
-  friends.user_id = ? AND friendS.status != ?`;
+  friends.user_id = ? AND friends.status != ?`;
 
   try {
     db.query(sql, [userId, "unfriend"], (err, results) => {
@@ -907,6 +958,15 @@ LEFT JOIN
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+const getAllUsers = async (req, res) => {
+  try {
+    res.status(200).json("users");
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving users", error });
+  }
+};
+
 module.exports = {
   register,
   getUser,
@@ -922,5 +982,6 @@ module.exports = {
   getUserFriendsPendinglistData,
   getUserFriendslistData,
   getHartingList,
-  update_user_nic_images
+  update_user_nic_images,
+  getAllUsers,
 };
