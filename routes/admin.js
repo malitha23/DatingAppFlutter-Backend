@@ -93,4 +93,50 @@ router.delete('/deleteHeartsPackage/:packageId', async (req, res) => {
         next(err); // Pass the error to the error-handling middleware
     }
 }); 
+
+router.get("/getsubscriptionPlansForAdmin", async (req, res, next) => {
+    try {
+        await adminController.getsubscriptionPlansForAdmin(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+}); 
+
+
+router.post("/subscription-plans-ForAdmin", async (req, res, next) => {
+    try {
+        await adminController.addSubscriptionPlan(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
+router.put("/subscription-plans-ForAdmin/:id", async (req, res, next) => {
+    try {
+        await adminController.updateSubscriptionPlan(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
+router.delete('/subscription-plans-deleteForAdmin/:id', async (req, res) => {
+    try {
+      await adminController.deleteSubscriptionPlan(req, res);
+    } catch (error) {
+      // Catch errors that are thrown by deleteSubscriptionPlan
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Error deleting subscription plan', error });
+      }
+    }
+  });
+  
+
+  router.put("/updateSelectedUserCoinBalance/:userId", async (req, res, next) => {
+    try {
+        await adminController.updateSelectedUserCoinBalance(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+}); 
+
 module.exports = router;

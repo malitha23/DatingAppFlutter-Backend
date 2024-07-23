@@ -963,7 +963,86 @@ const updateSelectedUserCoinBalance = async (req, res) => {
   }
 };
 
+const getsubscriptionPlansForAdmin = async (req, res) => {
+  const sql = 'SELECT * FROM subscription_plans';
 
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching subscription plans:', err);
+      return res.status(500).json({ message: 'Error fetching subscription plans' });
+    }
+
+    // Process the results to convert integer values and parse JSON
+    const processedResults = results.map(plan => ({
+      ...plan,
+      discount: plan.discount === 1, // Convert integer to boolean
+      features: JSON.parse(plan.features) // Parse JSON string to object
+    }));
+
+    res.status(200).json(processedResults);
+  });
+};
+
+// Add a new subscription plan
+const addSubscriptionPlan = (req, res) => {
+  const { planName, price, discount, discountPercentage, discountShowValue, features } = req.body;
+
+  // Convert boolean to integer for database storage
+  const discountInt = discount ? 1 : 0;
+
+  // Convert features object to JSON string
+  const featuresJson = JSON.stringify(features);
+
+  const sql = 'INSERT INTO subscription_plans (plan_name, price, discount, discount_percentage, discount_show_value, features) VALUES (?, ?, ?, ?, ?, ?)';
+
+  db.query(sql, [planName, price, discountInt, discountPercentage, discountShowValue, featuresJson], (err, results) => {
+    if (err) {
+      console.error('Error adding subscription plan:', err);
+      return res.status(500).json({ message: 'Error adding subscription plan' });
+    }
+
+    res.status(201).json({ message: 'Subscription plan added successfully', id: results.insertId });
+  });
+};
+
+// Update a subscription plan
+const updateSubscriptionPlan = (req, res) => {
+  const { id } = req.params;
+  const { planName, price, discount, discountPercentage, discountShowValue, features } = req.body;
+
+  // Convert boolean to integer for database storage
+  const discountInt = discount ? 1 : 0;
+
+  // Convert features object to JSON string
+  const featuresJson = JSON.stringify(features);
+
+  const sql = 'UPDATE subscription_plans SET plan_name = ?, price = ?, discount = ?, discount_percentage = ?, discount_show_value = ?, features = ? WHERE id = ?';
+
+  db.query(sql, [planName, price, discountInt, discountPercentage, discountShowValue, featuresJson, id], (err, results) => {
+    if (err) {
+      console.error('Error updating subscription plan:', err);
+      return res.status(500).json({ message: 'Error updating subscription plan' });
+    }
+
+    res.status(200).json({ message: 'Subscription plan updated successfully' });
+  });
+};
+
+// Delete a subscription plan
+const deleteSubscriptionPlan = (req, res) => {
+  const { id } = req.params;
+
+  const sql = 'DELETE FROM subscription_plans WHERE id = ?';
+
+  db.query(sql, [id], (err, results) => {
+    if (err) {
+      console.error('Error deleting subscription plan:', err);
+      return res.status(500).json({ message: 'Error deleting subscription plan' });
+    }
+
+    res.status(200).json({ message: 'Subscription plan deleted successfully' });
+  });
+};
 
 module.exports = {
   addNewUserForAdmin,
@@ -975,5 +1054,9 @@ module.exports = {
   addHeartsPackage,
   updateHeartsPackage,
   deleteHeartsPackage,
-  updateSelectedUserCoinBalance
+  updateSelectedUserCoinBalance,
+  getsubscriptionPlansForAdmin,
+  deleteSubscriptionPlan,
+  updateSubscriptionPlan,
+  addSubscriptionPlan
 };

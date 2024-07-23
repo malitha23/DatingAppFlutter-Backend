@@ -22,6 +22,7 @@ const authRoutecoins = require("./routes/coins");
 const authRoutePackages = require("./routes/packages");
 const authRouteAdmin= require("./routes/admin");
 const authRouteForgetpassword = require("./routes/forgetpassword");
+const authRouteSubscriptionPlans = require("./routes/subscriptionPlans");
 
 app.get("/", (req, res) => res.send("Hello World!"));
 app.use("/api/user", authRoute);
@@ -29,6 +30,7 @@ app.use("/api/coins", authRoutecoins);
 app.use("/api/packages", authRoutePackages);
 app.use(bodyParser.json());
 app.use("/api/forgetpassword", authRouteForgetpassword);
+app.use("/api/subscriptionPlans", authRouteSubscriptionPlans);
 app.use(authMiddleware);
 app.use("/api/admin", authRouteAdmin);
 
