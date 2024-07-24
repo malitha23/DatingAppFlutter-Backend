@@ -270,6 +270,90 @@ const getFriendsList = async (req, res) => {
   );
 };
 
+const getMessagessList = async (req, res) => {
+  const userId = req.params.userId; // Extract user ID from request parameters
+
+  // Define the SQL query to get the latest messages
+  const messagesSql = `
+    SELECT m.*
+    FROM messages m
+    INNER JOIN (
+      SELECT room_name, MAX(created_at) AS max_created_at
+      FROM messages
+      WHERE sender_id = ? OR receiverId = ?
+      GROUP BY room_name
+    ) latest
+    ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
+    WHERE m.sender_id = ? OR m.receiverId = ?
+  `;
+
+  try {
+    // Execute the query to get the latest messages
+    db.query(messagesSql, [userId, userId, userId, userId], async (err, messagesResults) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+
+      // Collect user details promises
+      const userDetailsPromises = messagesResults
+        .filter(message => message.receiverId != userId || message.sender_id != userId)
+        .map(message => {
+          console.log(message);
+          const friendId = message.receiverId != userId ? message.receiverId : message.sender_id;
+          console.log(friendId);
+          const userSql = `
+            SELECT DISTINCT  
+              users.*, 
+              register_user_portfolio_data.firstName, 
+              register_user_portfolio_data.lastName,
+              register_steps_user_data.profilePic
+            FROM users 
+            JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
+            JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+            WHERE users.id = ?
+          `;
+          return new Promise((resolve, reject) => {
+            db.query(userSql, [friendId], (err, userResults) => {
+              if (err) {
+                return reject(err);
+              }
+           
+              resolve({
+                friend: userResults[0],
+                lastMessage: {
+                  id: message.id,
+                  messageId: message.messageId,
+                  room_name: message.room_name,
+                  sender_id: message.sender_id,
+                  receiverId: message.receiverId,
+                  message: message.message,
+                  status: message.status,
+                  created_at: message.created_at
+                }
+              }); // Assuming one result per user
+            });
+          });
+        });
+
+      try {
+        const messages = await Promise.all(userDetailsPromises);
+        return res.json(messages);
+      } catch (userDetailsError) {
+        console.error('Error fetching user details:', userDetailsError);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+  } catch (err) {
+    console.error('Error executing query:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+
+
+
 const getHartingList = async (req, res) => {
   try {
     const userId = req.params.userId; // Extract user ID from request parameters
@@ -967,6 +1051,38 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+const updateProfilePic = async (req, res) => {
+  const { userId } = req.params;
+  const { profilePic } = req.body;
+
+  if (!userId || !profilePic) {
+    return res.status(400).json({ message: 'Missing userId or profilePic' });
+  }
+
+  try {
+    const sql = 'UPDATE register_steps_user_data SET profilePic = ? WHERE userId = ?';
+    const values = [profilePic, userId];
+
+    db.query(sql, values, (err, results) => {
+      if (err) {
+        console.error('Error updating profile picture:', err);
+        return res.status(500).json({ message: 'Error updating profile picture' });
+      }
+
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      res.status(200).json({ message: 'Profile picture updated successfully' });
+    });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).json({ message: 'Unexpected error occurred' });
+  }
+};
+
+
+
 module.exports = {
   register,
   getUser,
@@ -984,4 +1100,6 @@ module.exports = {
   getHartingList,
   update_user_nic_images,
   getAllUsers,
+  updateProfilePic,
+  getMessagessList
 };

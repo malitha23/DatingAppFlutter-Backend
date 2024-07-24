@@ -144,79 +144,79 @@ module.exports = function (io, db, users) {
                 });
 
                 try {
-                  // Define the SQL query to retrieve friend IDs for the given user ID
-                  const friendsSql = `
-                  SELECT DISTINCT  
-  users.*, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic
-  FROM users 
-  JOIN friendships ON users.id = friendships.friend_id OR users.id = friendships.user_id 
-  JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-  JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
-  WHERE (friendships.user_id = ? OR friendships.friend_id = ?) AND users.id != ?
-              `;
-
-                  // Execute the SQL query to get friend IDs
-                  db.query(
-                    friendsSql,
-                    [receiverId, receiverId, receiverId],
-                    async (err, friendsResults) => {
-                      if (err) {
-                        console.error(err);
-                        return res
-                          .status(500)
-                          .json({ error: "Internal server error" });
-                      }
-
-                      // Array to store promises for fetching last messages
-                      const lastMessagesPromises = [];
-
-                      // Loop through each friend
-                      for (const friend of friendsResults) {
-                        // Define the SQL query to retrieve the last message for the current friend
-                        const lastMessageSql = `
-                    SELECT *
-                    FROM messages
-                    WHERE (sender_id = ? AND receiverId = ?) OR (sender_id = ? AND receiverId = ?)
-                    ORDER BY created_at DESC
-                    LIMIT 1
+                  const messagesSql = `
+                    SELECT m.*
+                    FROM messages m
+                    INNER JOIN (
+                      SELECT room_name, MAX(created_at) AS max_created_at
+                      FROM messages
+                      WHERE sender_id = ? OR receiverId = ?
+                      GROUP BY room_name
+                    ) latest
+                    ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
+                    WHERE m.sender_id = ? OR m.receiverId = ?
                   `;
-
-                        // Execute the SQL query to get the last message for the current friend
-                        const promise = new Promise((resolve, reject) => {
-                          db.query(
-                            lastMessageSql,
-                            [receiverId, friend.id, friend.id, receiverId],
-                            (err, messageResult) => {
-                              if (err) {
-                                console.error(err);
-                                reject(err);
-                              } else {
-                                resolve({
-                                  friend,
-                                  lastMessage: messageResult[0],
-                                });
-                              }
-                            }
-                          );
-                        });
-
-                        // Push the promise into the array
-                        lastMessagesPromises.push(promise);
+                
+                
+                    // Execute the query to get the latest messages
+                    db.query(messagesSql, [receiverId, receiverId, receiverId, receiverId], async (err, messagesResults) => {
+                      if (err) {
+                        return res.status(500).json({ error: err.message });
                       }
-
-                      // Wait for all promises to resolve
-                      const lastMessagesResults = await Promise.all(
-                        lastMessagesPromises
-                      );
-
-                      io.to(users[receiverId]).emit("getlastmessagesReturn", {
-                        lastMessagesResults,
-                      });
-                    }
-                  );
-                } catch (error) {
-                  handleError(error);
-                }
+                
+                      // Collect user details promises
+                      const userDetailsPromises = messagesResults
+                        .filter(message => message.receiverId != receiverId || message.sender_id != receiverId)
+                        .map(message => {
+                          const friendId = message.receiverId != receiverId ? message.receiverId : message.sender_id;
+                          const userSql = `
+                            SELECT DISTINCT  
+                              users.*, 
+                              register_user_portfolio_data.firstName, 
+                              register_user_portfolio_data.lastName,
+                              register_steps_user_data.profilePic
+                            FROM users 
+                            JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
+                            JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+                            WHERE users.id = ?
+                          `;
+                          return new Promise((resolve, reject) => {
+                            db.query(userSql, [friendId], (err, userResults) => {
+                              if (err) {
+                                return reject(err);
+                              }
+                              resolve({
+                                friend: userResults[0],
+                                lastMessage: {
+                                  id: message.id,
+                                  messageId: message.messageId,
+                                  room_name: message.room_name,
+                                  sender_id: message.sender_id,
+                                  receiverId: message.receiverId,
+                                  message: message.message,
+                                  status: message.status,
+                                  created_at: message.created_at
+                                }
+                              }); // Assuming one result per user
+                            });
+                          });
+                        });
+                
+                      try {
+                        const lastMessagesResults = await Promise.all(userDetailsPromises);
+                        io.to(users[receiverId]).emit("getlastmessagesReturn", {
+                          lastMessagesResults,
+                        });
+                      } catch (userDetailsError) {
+                        console.error('Error fetching user details:', userDetailsError);
+                       // return res.status(500).json({ error: 'Internal server error' });
+                      }
+                    });
+                
+                 
+                      } catch (error) {
+                        handleError(error);
+                      }
               }
             }
           );
@@ -241,75 +241,79 @@ module.exports = function (io, db, users) {
           io.to(users[friendId]).emit("messagesDeleted", selectedMessageIds);
           io.to(users[userId]).emit("messagesDeleted", selectedMessageIds);
           try {
-            // Define the SQL query to retrieve friend IDs for the given user ID
-            const friendsSql = `
-            SELECT DISTINCT  
-  users.*, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic
-  FROM users 
-  JOIN friendships ON users.id = friendships.friend_id OR users.id = friendships.user_id 
-  JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-  JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
-  WHERE (friendships.user_id = ? OR friendships.friend_id = ?) AND users.id != ?
+            const messagesSql = `
+              SELECT m.*
+              FROM messages m
+              INNER JOIN (
+                SELECT room_name, MAX(created_at) AS max_created_at
+                FROM messages
+                WHERE sender_id = ? OR receiverId = ?
+                GROUP BY room_name
+              ) latest
+              ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
+              WHERE m.sender_id = ? OR m.receiverId = ?
             `;
-
-            // Execute the SQL query to get friend IDs
-            db.query(
-              friendsSql,
-              [friendId, friendId, friendId],
-              async (err, friendsResults) => {
+          
+          
+              // Execute the query to get the latest messages
+              db.query(messagesSql, [friendId, friendId, friendId, friendId], async (err, messagesResults) => {
                 if (err) {
-                  console.error(err);
-                  return res
-                    .status(500)
-                    .json({ error: "Internal server error" });
+                  return res.status(500).json({ error: err.message });
                 }
-
-                // Array to store promises for fetching last messages
-                const lastMessagesPromises = [];
-
-                // Loop through each friend
-                for (const friend of friendsResults) {
-                  // Define the SQL query to retrieve the last message for the current friend
-                  const lastMessageSql = `
-                  SELECT *
-                  FROM messages
-                  WHERE (sender_id = ? AND receiverId = ?) OR (sender_id = ? AND receiverId = ?)
-                  ORDER BY created_at DESC
-                  LIMIT 1
-                `;
-
-                  // Execute the SQL query to get the last message for the current friend
-                  const promise = new Promise((resolve, reject) => {
-                    db.query(
-                      lastMessageSql,
-                      [friendId, friend.id, friend.id, friendId],
-                      (err, messageResult) => {
+          
+                // Collect user details promises
+                const userDetailsPromises = messagesResults
+                  .filter(message => message.receiverId != friendId || message.sender_id != friendId)
+                  .map(message => {
+                    const friendId = message.receiverId != friendId ? message.receiverId : message.sender_id;
+                    const userSql = `
+                      SELECT DISTINCT  
+                        users.*, 
+                        register_user_portfolio_data.firstName, 
+                        register_user_portfolio_data.lastName,
+                        register_steps_user_data.profilePic
+                      FROM users 
+                      JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
+                      JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+                      WHERE users.id = ?
+                    `;
+                    return new Promise((resolve, reject) => {
+                      db.query(userSql, [friendId], (err, userResults) => {
                         if (err) {
-                          console.error(err);
-                          reject(err);
-                        } else {
-                          resolve({ friend, lastMessage: messageResult[0] });
+                          return reject(err);
                         }
-                      }
-                    );
+                        resolve({
+                          friend: userResults[0],
+                          lastMessage: {
+                            id: message.id,
+                            messageId: message.messageId,
+                            room_name: message.room_name,
+                            sender_id: message.sender_id,
+                            receiverId: message.receiverId,
+                            message: message.message,
+                            status: message.status,
+                            created_at: message.created_at
+                          }
+                        }); // Assuming one result per user
+                      });
+                    });
                   });
-
-                  // Push the promise into the array
-                  lastMessagesPromises.push(promise);
+          
+                try {
+                  const lastMessagesResults = await Promise.all(userDetailsPromises);
+                  io.to(users[friendId]).emit("getlastmessagesReturn", {
+                    lastMessagesResults,
+                  });
+                } catch (userDetailsError) {
+                  console.error('Error fetching user details:', userDetailsError);
+                 // return res.status(500).json({ error: 'Internal server error' });
                 }
-
-                // Wait for all promises to resolve
-                const lastMessagesResults = await Promise.all(
-                  lastMessagesPromises
-                );
-                io.to(users[friendId]).emit("getlastmessagesReturn", {
-                  lastMessagesResults,
-                });
-              }
-            );
-          } catch (error) {
-            handleError(error);
-          }
+              });
+          
+           
+                } catch (error) {
+                  handleError(error);
+                }
         }
       });
     });
@@ -391,68 +395,139 @@ module.exports = function (io, db, users) {
     });
 
     socket.on("getlastmessages", ({ userId }) => {
-      const id = userId;
+
+  //       // Define the SQL query to retrieve friend IDs for the given user ID
+  //       const friendsSql = `
+  //       SELECT DISTINCT  
+  // users.*, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic
+  // FROM users 
+  // JOIN friendships ON users.id = friendships.friend_id OR users.id = friendships.user_id 
+  // JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
+  // JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+  // WHERE (friendships.user_id = ? OR friendships.friend_id = ?) AND users.id != ?
+  //       `;
+
+  //       // Execute the SQL query to get friend IDs
+  //       db.query(friendsSql, [id, id, id], async (err, friendsResults) => {
+  //         if (err) {
+  //           console.error(err);
+  //           return res.status(500).json({ error: "Internal server error" });
+  //         }
+
+  //         // Array to store promises for fetching last messages
+  //         const lastMessagesPromises = [];
+
+  //         // Loop through each friend
+  //         for (const friend of friendsResults) {
+  //           // Define the SQL query to retrieve the last message for the current friend
+  //           const lastMessageSql = `
+  //             SELECT *
+  //             FROM messages
+  //             WHERE (sender_id = ? AND receiverId = ?) OR (sender_id = ? AND receiverId = ?)
+  //             ORDER BY created_at DESC
+  //             LIMIT 1
+  //           `;
+
+  //           // Execute the SQL query to get the last message for the current friend
+  //           const promise = new Promise((resolve, reject) => {
+  //             db.query(
+  //               lastMessageSql,
+  //               [id, friend.id, friend.id, id],
+  //               (err, messageResult) => {
+  //                 if (err) {
+  //                   console.error(err);
+  //                   reject(err);
+  //                 } else {
+  //                   resolve({ friend, lastMessage: messageResult[0] });
+  //                 }
+  //               }
+  //             );
+  //           });
+
+  //           // Push the promise into the array
+  //           lastMessagesPromises.push(promise);
+  //         }
+
+  //         // Wait for all promises to resolve
+  //         const lastMessagesResults = await Promise.all(lastMessagesPromises);
+          // io.to(users[userId]).emit("getlastmessagesReturn", {
+          //   lastMessagesResults,
+          // });
+          // io.to(users[userId]).emit("unseenMessagesCount", 0);
+  //       });
+  
+  try {
+  const messagesSql = `
+    SELECT m.*
+    FROM messages m
+    INNER JOIN (
+      SELECT room_name, MAX(created_at) AS max_created_at
+      FROM messages
+      WHERE sender_id = ? OR receiverId = ?
+      GROUP BY room_name
+    ) latest
+    ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
+    WHERE m.sender_id = ? OR m.receiverId = ?
+  `;
+
+
+    // Execute the query to get the latest messages
+    db.query(messagesSql, [userId, userId, userId, userId], async (err, messagesResults) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+
+      // Collect user details promises
+      const userDetailsPromises = messagesResults
+        .filter(message => message.receiverId != userId || message.sender_id != userId)
+        .map(message => {
+          const friendId = message.receiverId != userId ? message.receiverId : message.sender_id;
+          const userSql = `
+            SELECT DISTINCT  
+              users.*, 
+              register_user_portfolio_data.firstName, 
+              register_user_portfolio_data.lastName,
+              register_steps_user_data.profilePic
+            FROM users 
+            JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
+            JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+            WHERE users.id = ?
+          `;
+          return new Promise((resolve, reject) => {
+            db.query(userSql, [friendId], (err, userResults) => {
+              if (err) {
+                return reject(err);
+              }
+              resolve({
+                friend: userResults[0],
+                lastMessage: {
+                  id: message.id,
+                  messageId: message.messageId,
+                  room_name: message.room_name,
+                  sender_id: message.sender_id,
+                  receiverId: message.receiverId,
+                  message: message.message,
+                  status: message.status,
+                  created_at: message.created_at
+                }
+              }); // Assuming one result per user
+            });
+          });
+        });
 
       try {
-        // Define the SQL query to retrieve friend IDs for the given user ID
-        const friendsSql = `
-        SELECT DISTINCT  
-  users.*, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic
-  FROM users 
-  JOIN friendships ON users.id = friendships.friend_id OR users.id = friendships.user_id 
-  JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-  JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
-  WHERE (friendships.user_id = ? OR friendships.friend_id = ?) AND users.id != ?
-        `;
-
-        // Execute the SQL query to get friend IDs
-        db.query(friendsSql, [id, id, id], async (err, friendsResults) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).json({ error: "Internal server error" });
-          }
-
-          // Array to store promises for fetching last messages
-          const lastMessagesPromises = [];
-
-          // Loop through each friend
-          for (const friend of friendsResults) {
-            // Define the SQL query to retrieve the last message for the current friend
-            const lastMessageSql = `
-              SELECT *
-              FROM messages
-              WHERE (sender_id = ? AND receiverId = ?) OR (sender_id = ? AND receiverId = ?)
-              ORDER BY created_at DESC
-              LIMIT 1
-            `;
-
-            // Execute the SQL query to get the last message for the current friend
-            const promise = new Promise((resolve, reject) => {
-              db.query(
-                lastMessageSql,
-                [id, friend.id, friend.id, id],
-                (err, messageResult) => {
-                  if (err) {
-                    console.error(err);
-                    reject(err);
-                  } else {
-                    resolve({ friend, lastMessage: messageResult[0] });
-                  }
-                }
-              );
-            });
-
-            // Push the promise into the array
-            lastMessagesPromises.push(promise);
-          }
-
-          // Wait for all promises to resolve
-          const lastMessagesResults = await Promise.all(lastMessagesPromises);
-          io.to(users[userId]).emit("getlastmessagesReturn", {
-            lastMessagesResults,
-          });
-          io.to(users[userId]).emit("unseenMessagesCount", 0);
+        const lastMessagesResults = await Promise.all(userDetailsPromises);
+        io.to(users[userId]).emit("getlastmessagesReturn", {
+          lastMessagesResults,
         });
+        io.to(users[userId]).emit("unseenMessagesCount", 0);
+      } catch (userDetailsError) {
+        console.error('Error fetching user details:', userDetailsError);
+       // return res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+ 
       } catch (error) {
         handleError(error);
       }

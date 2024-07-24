@@ -46,7 +46,7 @@ const insertCoinBalance = async (req, res) => {
       return res.status(500).json({ message: "Error inserting coin balance" });
     }
     await insertFreePackageOneMonth(req);
-    res.status(200).json({ message: "Coin balance inserted successfully" });
+    res.status(200).json({ message: "Coin balance inserted successfully", userData });
  
   });
 };
