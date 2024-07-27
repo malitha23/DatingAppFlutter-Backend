@@ -31,4 +31,4 @@ jobs:
           cd /var/www/lovebird4u.com/DatingAppFlutter-Backend
           git pull origin main
           npm install
-          pm2 restart app.js # Restart your app using PM2 (or any other process manager)
+          pm2 restart lovebird-backend # Restart your app using PM2 (or any other process manager)
