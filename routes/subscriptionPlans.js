@@ -2,7 +2,7 @@ const router = require("express").Router();
 
 const authController = require("../controllers/subscriptionPlansController.js");
 
-router.get('/getsubscriptionPlans', authController.getsubscriptionPlans);
+router.get('/getsubscriptionPlanss', authController.getsubscriptionPlans);
 
 
 module.exports = router;
