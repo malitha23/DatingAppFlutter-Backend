@@ -4,7 +4,7 @@ const authController = require("../controllers/UserController.js");
 
 router.post("/register", authController.register);
 router.get("/getUser", authController.getUser);
-router.post("/login", authController.login);
+router.post("/loginn", authController.login);
 router.get("/friends/:userId", authController.getFriendsList);
 router.get("/getMessagessList/:userId", authController.getMessagessList);
 router.post("/register_steps_user_data", authController.register_steps_user_data);

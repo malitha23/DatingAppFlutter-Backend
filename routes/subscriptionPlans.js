@@ -6,4 +6,3 @@ router.get('/getsubscriptionPlans', authController.getsubscriptionPlans);
 
 
 module.exports = router;
-// hi
