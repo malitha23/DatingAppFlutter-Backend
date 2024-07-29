@@ -914,7 +914,7 @@ const getAllUsersToHomepage = async (req, res) => {
       userId,
       userId,
       userId,
-      userGender
+      userGender,
       `%${query}%`,
       `%${query}%`,
       `%${query}%`,
