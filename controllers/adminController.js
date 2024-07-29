@@ -769,6 +769,24 @@ const updateUser = async (req, res) => {
   }
 };
 
+const updateUserStatus = async (req, res) => {
+  const userId = req.params.userId;
+  const { status } = req.body;
+
+  const query = 'UPDATE `users` SET `status` = ? WHERE `id` = ?';
+  const values = [status, userId];
+  db.query(query, values, async (err, results) => {
+    if (err) {
+      console.error('Error updating user status:', err);
+      return res.status(500).json({ message: 'Database error', error: err });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json({ message: 'User status updated successfully' });
+  });
+};
+
 
 const updateuserPackageData = async (req, res) => {
   const userId = req.params.userId;
@@ -1049,6 +1067,7 @@ module.exports = {
   getAllUsers,
   deleteUserData,
   updateUser,
+  updateUserStatus,
   updateuserPackageData,
   getHeartsPackages,
   addHeartsPackage,

@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const adminController = require("../controllers/adminController.js");
+const adminControllerToOffers = require("../controllers/adminController_To_Offres.js");
 const adminMiddleware = require("../middlewares/adminMiddleware.js");
 const UserController = require("../controllers/UserController.js");
 
@@ -41,6 +42,14 @@ router.put("/UpdateUserForAdmin/:userId", async (req, res, next) => {
         next(err); // Pass the error to the error-handling middleware
     }
 }); 
+
+router.put("/UpdateUserStatusForAdmin/:userId", async (req, res, next) => {
+    try {
+        await adminController.updateUserStatus(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
 
 router.put("/UpdateUserPackageForAdmin/:userId", async (req, res, next) => {
     try {
@@ -134,6 +143,40 @@ router.delete('/subscription-plans-deleteForAdmin/:id', async (req, res) => {
   router.put("/updateSelectedUserCoinBalance/:userId", async (req, res, next) => {
     try {
         await adminController.updateSelectedUserCoinBalance(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+}); 
+
+/** Admin Offers Setup routes -------------------------------------------------------------------------------------   **/
+
+router.get("/getreferralOffersForAdmin", async (req, res, next) => {
+    try {
+        await adminControllerToOffers.getAllReferralOffersForAdmin(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+}); 
+router.post("/AddNewReferralOffersForAdmin", async (req, res, next) => {
+    try {
+        await adminControllerToOffers.AddNewReferralOffersForAdmin(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+}); 
+router.delete('/deleteReferralOfferForAdmin/:id', async (req, res) => {
+    try {
+      await adminControllerToOffers.deleteReferralOffer(req, res);
+    } catch (error) {
+      // Catch errors that are thrown by deleteSubscriptionPlan
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Error deleting subscription plan', error });
+      }
+    }
+  });
+router.put("/updateReferralOfferForAdmin/:id", async (req, res, next) => {
+    try {
+        await adminControllerToOffers.updateReferralOffer(req, res);
     } catch (err) {
         next(err); // Pass the error to the error-handling middleware
     }
