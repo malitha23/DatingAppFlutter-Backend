@@ -19,11 +19,12 @@ const insertCoinBalance = async (req, res) => {
   if (!userData) {
     return res.status(404).json({ message: "User not found" });
   }
+
   const userId = userData["id"];
 
   // Extract the coin balance from the request body
-  const { coin_balance } = req.body;
-
+  // const { coin_balance } = req.body;
+  const coin_balance = await getcoin_balance(userData["referral_code"]?? '');
   // Get the current timestamp for created_at and updated_at
   const currentTimestamp = new Date();
 
@@ -48,6 +49,40 @@ const insertCoinBalance = async (req, res) => {
     await insertFreePackageOneMonth(req);
     res.status(200).json({ message: "Coin balance inserted successfully", userData });
  
+  });
+};
+
+const getcoin_balance = (referral_code) => {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT * FROM referral_code_offers WHERE referral_code = ?`;
+    // Query the database to retrieve user data based on the NIC number
+    db.query(sql, [referral_code], (err, results) => {
+      if (err) {
+        console.error(err);
+        reject(err); // Reject with the error object
+      } else {
+        // If user data is found, resolve the promise with the user data
+        if (results.length > 0) {
+          resolve(results[0].add_hearts);
+        } else {
+          const sql = `SELECT * FROM registered_user_free_hearts_count`;
+          // Query the database to retrieve user data based on the NIC number
+          db.query(sql, [referral_code], (err, results2) => {
+            if (err) {
+              console.error(err);
+              reject(err); // Reject with the error object
+            } else {
+              // If user data is found, resolve the promise with the user data
+              if (results2.length > 0) {
+                resolve(results[0].hearts_count);
+              } else {
+                resolve(0);
+              }
+            }
+          });
+        }
+      }
+    });
   });
 };
 

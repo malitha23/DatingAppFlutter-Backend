@@ -785,6 +785,7 @@ const getAllUsersToHomepage = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     const userId = userData.id;
+    const status = 1;
     const registerData = await getUserRegisterData(userId);
     const userGender = registerData.gender;
 
@@ -888,7 +889,7 @@ const getAllUsersToHomepage = async (req, res) => {
     LEFT JOIN 
     register_user_portfolio_data rupd ON u.id = rupd.userId
     WHERE 
-    u.id != ? AND rsud.gender != ? AND 
+    u.id != ? AND rsud.gender != ? AND u.status = ? AND
     (u.nic LIKE ? OR rsud.interests LIKE ? OR rupd.firstName LIKE ? OR rupd.lastName LIKE ?)
     ${location ? "AND rupd.location LIKE ?" : ""}
     ${generatedKey ? "AND u.generatedKey LIKE ?" : ""}
@@ -914,6 +915,7 @@ const getAllUsersToHomepage = async (req, res) => {
       userId,
       userId,
       userGender,
+      status
       `%${query}%`,
       `%${query}%`,
       `%${query}%`,
