@@ -25,13 +25,25 @@ const getsubscriptionPlans = async (req, res) => {
   });
 };
 
-const getReferralCodeOffers = (referralCode, callback) => {
+const getReferralCodeOffers = (referralCode, userId, callback) => {
   const query = "SELECT * FROM referral_code_offers WHERE referral_code = ?";
   db.query(query, [referralCode], (error, results) => {
     if (error) {
       return callback(error, null);
     }
-    callback(null, results);
+
+    if (results.length > 0) {
+      // Referral code is valid, proceed with setting referral_code to an empty string
+      const updateQuery = "UPDATE users SET referral_code = ? WHERE id = ?";
+      db.query(updateQuery, [referralCode,userId], (updateError, updateResults) => {
+        if (updateError) {
+          return callback(updateError, null);
+        }
+        callback(null, results);
+      });
+    } else {
+      callback(null, results);
+    }
   });
 };
 
@@ -46,13 +58,28 @@ const applyDiscount = (price, discount) => {
 };
 
 const checkReferralCodeToGetOffers = async (req, res) => {
+    // Extract token from the request headers
+    const token = req.headers.authorization;
+
+    // Verify the token
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+  
+    const userData = await getUserData(decoded.nic);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const userId = userData["id"];
+
   const { referralCode } = req.body;
 
   if (!referralCode) {
     return res.status(400).json({ message: "Referral code is required" });
   }
 
-  getReferralCodeOffers(referralCode, (error, results) => {
+  getReferralCodeOffers(referralCode, userId, (error, results) => {
     if (error) {
       return res.status(500).json({ message: "Error retrieving offers" });
     }
