@@ -22,8 +22,8 @@ const insertCoinBalance = async (req, res) => {
   const userId = userData["id"];
 
   // Extract the coin balance from the request body
-  // const { coin_balance } = req.body;
-  const coin_balance = await getcoin_balance(userId);
+  const { coin_balance } = req.body;
+
   // Get the current timestamp for created_at and updated_at
   const currentTimestamp = new Date();
 
@@ -48,27 +48,6 @@ const insertCoinBalance = async (req, res) => {
     await insertFreePackageOneMonth(req);
     res.status(200).json({ message: "Coin balance inserted successfully", userData });
  
-  });
-};
-
-const getcoin_balance = (userId) => {
-  return new Promise((resolve, reject) => {
-    const sql = ``;
-    // Query the database to retrieve user data based on the NIC number
-    db.query(sql, [nic], (err, results) => {
-      if (err) {
-        console.error(err);
-        reject(err); // Reject with the error object
-      } else {
-        // If user data is found, resolve the promise with the user data
-        if (results.length > 0) {
-          resolve(results[0]);
-        } else {
-          // If user data is not found, reject with a specific message
-          reject("User not found");
-        }
-      }
-    });
   });
 };
 
