@@ -28,27 +28,57 @@ const insertCoinBalance = async (req, res) => {
   // Get the current timestamp for created_at and updated_at
   const currentTimestamp = new Date();
 
-  // Insert a new record into the coin_balance table
-  const insertSql = `
-    INSERT INTO coin_balance (userId, coin_balance, created_at, updated_at)
-    VALUES (?, ?, ?, ?)
-  `;
-
-  const insertValues = [
-    userId,
-    coin_balance,
-    currentTimestamp,
-    currentTimestamp,
-  ];
-
-  db.query(insertSql, insertValues, async (err, result) => {
-    if (err) {
-      console.error("Error inserting coin balance: ", err);
-      return res.status(500).json({ message: "Error inserting coin balance" });
+  // Check if userId exists in the coin_balance table
+  const checkUserSql = 'SELECT COUNT(*) AS count FROM coin_balance WHERE userId = ?';
+  db.query(checkUserSql, [userId], (checkErr, checkResult) => {
+    if (checkErr) {
+      console.error("Error checking user existence: ", checkErr);
+      return res.status(500).json({ message: "Error checking user existence" });
     }
-    await insertFreePackageOneMonth(req);
-    res.status(200).json({ message: "Coin balance inserted successfully", userData });
- 
+  
+    const userExists = checkResult[0].count > 0;
+    if (userExists) {
+      // Update the existing record
+      const updateSql = `
+        UPDATE coin_balance
+        SET coin_balance = ?, updated_at = ?
+        WHERE userId = ?
+      `;
+      const updateValues = [coin_balance, currentTimestamp, userId];
+  
+      db.query(updateSql, updateValues, async (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error("Error updating coin balance: ", updateErr);
+          return res.status(500).json({ message: "Error updating coin balance" });
+        }
+  
+        await insertFreePackageOneMonth(req);
+        res.status(200).json({ message: "Coin balance updated successfully", coin_balance, userData });
+      });
+    } else{
+        // Insert a new record into the coin_balance table
+  const insertSql = `
+  INSERT INTO coin_balance (userId, coin_balance, created_at, updated_at)
+  VALUES (?, ?, ?, ?)
+`;
+
+const insertValues = [
+  userId,
+  coin_balance,
+  currentTimestamp,
+  currentTimestamp,
+];
+
+db.query(insertSql, insertValues, async (err, result) => {
+  if (err) {
+    console.error("Error inserting coin balance: ", err);
+    return res.status(500).json({ message: "Error inserting coin balance" });
+  }
+  await insertFreePackageOneMonth(req);
+  res.status(200).json({ message: "Coin balance inserted successfully",coin_balance, userData });
+
+});
+    }
   });
 };
 
@@ -74,7 +104,7 @@ const getcoin_balance = (referral_code) => {
             } else {
               // If user data is found, resolve the promise with the user data
               if (results2.length > 0) {
-                resolve(results[0].hearts_count);
+                resolve(results2[0].hearts_count);
               } else {
                 resolve(0);
               }

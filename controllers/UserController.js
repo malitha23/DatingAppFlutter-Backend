@@ -131,15 +131,31 @@ const getUserData = (nic) => {
     rupd.address,
     rupd.personalityDescription,
     rupd.alcoholConsumption,
-    rupd.lookingFor
-    FROM 
+    rupd.lookingFor,
+    pkbd.id AS paymentId,
+    pkbd.price,
+    pkbd.duration,
+    pkbd.packageStartDate,
+    pkbd.packageStartEnd,
+    pkbd.plan_name,
+    pkbd.payment_date,
+    pkbd.payment_status,
+    pkbd.created_at
+FROM 
     users u
-    LEFT JOIN 
+LEFT JOIN 
     register_steps_user_data rsud ON u.id = rsud.userId
-    LEFT JOIN 
+LEFT JOIN 
     register_user_portfolio_data rupd ON u.id = rupd.userId
-    WHERE 
-    u.nic = ? `;
+LEFT JOIN 
+    packagesbuydata pkbd ON u.id = pkbd.userId
+    AND pkbd.payment_date = (
+        SELECT MAX(payment_date)
+        FROM packagesbuydata
+        WHERE userId = u.id
+    )
+WHERE 
+    u.nic = ?`;
     // Query the database to retrieve user data based on the NIC number
     db.query(sql, [nic], (err, results) => {
       if (err) {
@@ -785,7 +801,6 @@ const getAllUsersToHomepage = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     const userId = userData.id;
-    const status = 1;
     const registerData = await getUserRegisterData(userId);
     const userGender = registerData.gender;
 
