@@ -13,7 +13,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.json({ limit: "1mb" }));
+// Increase JSON payload size limit
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors({ origin: "*" }));
 
 const port = process.env.PORT || 3000;
@@ -28,7 +30,7 @@ app.get("/", (req, res) => res.send("Hello World!"));
 app.use("/api/user", authRoute);
 app.use("/api/coins", authRoutecoins);
 app.use("/api/packages", authRoutePackages);
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "50mb" }));
 app.use("/api/forgetpassword", authRouteForgetpassword);
 app.use("/api/subscriptionPlans", authRouteSubscriptionPlans);
 app.use(authMiddleware);
