@@ -415,7 +415,8 @@ const register_steps_user_data = async (req, res) => {
   // Extract the remaining data from the request body
   const { gender, age, birthday, interests, profilePic, otherImages } =
     req.body;
-
+    console.log("Register Step User ID:", userId);
+    console.log("Register Step Request Body:", req.body);
   // Check if the userId already exists in the table
   const checkSql = "SELECT * FROM register_steps_user_data WHERE userId = ?";
   db.query(checkSql, [userId], (checkErr, checkResults) => {
