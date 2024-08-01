@@ -399,6 +399,7 @@ const getHartingList = async (req, res) => {
 const register_steps_user_data = async (req, res) => {
   // Extract token from the request headers
   const token = req.headers.authorization;
+  console.log("Register Step Request Body:", req.body);
 
   // Verify the token
   const decoded = verifyToken(token);
