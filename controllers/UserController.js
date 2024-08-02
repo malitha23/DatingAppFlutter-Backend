@@ -572,8 +572,7 @@ const register_user_portfolio_data = async (req, res) => {
   const formData = req.body;
   const pno = formData.whatsAppNumber;
   // Check if the WhatsApp number already exists in the register_user_portfolio_data table
-  const checkQueryfirst =
-    "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ? AND userId = ?";
+  const checkQueryfirst = "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ? AND userId = ?";
   db.query(checkQueryfirst, [pno,userId], (err, results) => {
     if (err) {
       return res.status(500).json({ message: "Database query error", error: err });
@@ -594,7 +593,7 @@ const register_user_portfolio_data = async (req, res) => {
 
       if (checkResult && checkResult.length > 0) {
         // Record exists, perform update
-        const updateQuery = `UPDATE register_user_portfolio_data SET firstName = ?, lastName = ?, whatsAppNumber = ?, job = ?, location = ?, marriageStatus = ?, heightFt = ?, heightIn = ?, weight = ?, address = ?, personalityDescription = ?, alcoholConsumption = ?, lookingFor = ? WHERE userId = ?`;
+        const updateQuery = "UPDATE register_user_portfolio_data SET firstName = ?, lastName = ?, whatsAppNumber = ?, job = ?, location = ?, marriageStatus = ?, heightFt = ?, heightIn = ?, weight = ?, address = ?, personalityDescription = ?, alcoholConsumption = ?, lookingFor = ? WHERE userId = ?";
 
         const updateValues = [
           formData.firstName,
