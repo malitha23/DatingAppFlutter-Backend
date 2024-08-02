@@ -552,67 +552,76 @@ const user_terms_agree = async (req, res) => {
 };
 
 const register_user_portfolio_data = async (req, res) => {
-  console.log(req.body);
-  try {
-    // Extract token from the request headers
-    const token = req.headers.authorization;
 
-    // Verify the token
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+  try{
+  // Extract token from the request headers
+  const token = req.headers.authorization;
 
-    const userData = await getUserData(decoded.nic);
-    if (!userData) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const userId = userData["id"];
-
-    const formData = req.body;
-    const pno = formData.whatsAppNumber;
-
-    // Check if the WhatsApp number already exists in the register_user_portfolio_data table
-    const checkQueryfirst = "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ?";
-    const [existingWhatsAppNumber] = await db.query(checkQueryfirst, [pno]);
-    if (existingWhatsAppNumber.length > 0) {
-      return res.status(409).send("WhatsApp number already exists");
-    }
-
-    // Insert new record
-    const insertQuery = `
-      INSERT INTO register_user_portfolio_data (
-        userId, firstName, lastName, whatsAppNumber, job, location, marriageStatus, heightFt, heightIn, weight, address, personalityDescription, alcoholConsumption, lookingFor
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    const insertValues = [
-      userId,
-      formData.firstName,
-      formData.lastName,
-      formData.whatsAppNumber,
-      formData.job,
-      formData.location,
-      formData.marriageStatus,
-      formData.heightFt,
-      formData.heightIn,
-      formData.weight,
-      formData.address,
-      formData.personalityDescription,
-      formData.alcoholConsumption,
-      formData.lookingFor
-    ];
-
-    await db.query(insertQuery, insertValues);
-    console.log("Data inserted successfully");
-    return res.status(200).send("Data inserted successfully");
-
-  } catch (error) {
-    console.error("Error inserting data: ", error);
-    return res.status(500).send("Error inserting data");
+  // Verify the token
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
-};
 
+  const userData = await getUserData(decoded.nic);
+  if (!userData) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  const userId = userData["id"];
+
+  const formData = req.body;
+  const pno = formData.whatsAppNumber;
+  console.log(formData);
+  // Check if the WhatsApp number already exists in the register_user_portfolio_data table
+  // const checkQueryfirst = "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ?";
+  // db.query(checkQueryfirst, [pno], (err, results) => {
+  //   if (err) {
+  //     return res.status(500).json({ message: "Database query error", error: err });
+  //   }
+
+  //   if (results.length > 0) {
+  //     return res.status(409).send("WhatsApp number already exists");
+  //   }else{
+
+    // Check if a record with the given userId already exists
+
+        // Record does not exist, perform insert
+        const insertQuery = `
+          INSERT INTO register_user_portfolio_data (
+            userId, firstName, lastName, whatsAppNumber, job, location, marriageStatus, heightFt, heightIn, weight, address, personalityDescription, alcoholConsumption, lookingFor
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const insertValues = [
+          userId,
+          formData.firstName,
+          formData.lastName,
+          formData.whatsAppNumber,
+          formData.job,
+          formData.location,
+          formData.marriageStatus,
+          formData.heightFt,
+          formData.heightIn,
+          formData.weight,
+          formData.address,
+          formData.personalityDescription,
+          formData.alcoholConsumption,
+          formData.lookingFor
+        ];
+
+        db.query(insertQuery, insertValues, (insertErr, insertResult) => {
+          if (insertErr) {
+            console.error("Error inserting data: ", insertErr);
+            return res.status(500).send("Error inserting data");
+          }
+          console.log("Data inserted successfully");
+          return res.status(200).send("Data inserted successfully");
+        });
+  
+}catch (e){
+  console.log(e);
+}
+};
 
 
 const update_register_user_portfolio_data = async (req, res) => {
