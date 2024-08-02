@@ -579,53 +579,7 @@ const register_user_portfolio_data = async (req, res) => {
     }
 
     if (results.length > 0) {
-      // WhatsApp number already exists
-      const updateQuery = `
-        UPDATE register_user_portfolio_data 
-        SET 
-          firstName = ?,
-          lastName = ?,
-          whatsAppNumber = ?,
-          job = ?,
-          location = ?,
-          marriageStatus = ?,
-          heightFt = ?,
-          heightIn = ?,
-          weight = ?,
-          address = ?,
-          personalityDescription = ?,
-          alcoholConsumption = ?,
-          lookingFor = ?
-        WHERE userId = ?
-      `;
-
-      const updateValues = [
-        formData.firstName,
-        formData.lastName,
-        formData.whatsAppNumber,
-        formData.job,
-        formData.location,
-        formData.marriageStatus,
-        formData.heightFt,
-        formData.heightIn,
-        formData.weight,
-        formData.address,
-        formData.personalityDescription,
-        formData.alcoholConsumption,
-        formData.lookingFor,
-        userId,
-      ];
-
-      db.query(updateQuery, updateValues, (updateErr, updateResult) => {
-        if (updateErr) {
-          console.error("Error updating data: ", updateErr);
-          return res.status(500).send("Error updating data");
-        }
-        console.log("Data updated successfully");
-        return res.status(200).send("Data updated successfully");
-      });
-
-      return; // Exit to avoid sending another response
+      return res.status(409).send("WhatsApp number already exists");
     }
 
     // Check if a record with the given userId already exists
