@@ -575,7 +575,7 @@ const register_user_portfolio_data = async (req, res) => {
 
     const formData = req.body;
     const pno = formData.whatsAppNumber;
-    console.log(formData);
+
     // Check if the WhatsApp number already exists in the register_user_portfolio_data table
     const checkQueryfirst =
       "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ?";
