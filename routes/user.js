@@ -17,5 +17,13 @@ router.get("/getUserFriendsPendinglistData", authController.getUserFriendsPendin
 router.get("/getUserFriendslistData", authController.getUserFriendslistData);
 router.get("/hartings/:userId", authController.getHartingList);
 router.put('/update-profile-pic/:userId', authController.updateProfilePic);
+router.delete('/deleteuser', async (req, res) => {
+    try {
+      await authController.deleteUserData(req);
+      res.status(200).json({ message: 'User deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error deleting user', error });
+    }
+  });
 
 module.exports = router;

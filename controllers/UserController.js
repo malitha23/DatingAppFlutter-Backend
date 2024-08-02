@@ -572,13 +572,13 @@ const register_user_portfolio_data = async (req, res) => {
   const formData = req.body;
   const pno = formData.whatsAppNumber;
   // Check if the WhatsApp number already exists in the register_user_portfolio_data table
-  const checkQueryfirst = "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ? AND userId = ?";
-  db.query(checkQueryfirst, [pno,userId], (err, results) => {
+  const checkQueryfirst = "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ?";
+  db.query(checkQueryfirst, [pno], (err, results) => {
     if (err) {
       return res.status(500).json({ message: "Database query error", error: err });
     }
 
-    if (results.length <= 0) {
+    if (results.length > 0) {
       return res.status(409).send("WhatsApp number already exists");
     }else{
 
@@ -1075,7 +1075,145 @@ const updateProfilePic = async (req, res) => {
   }
 };
 
+const deleteUserData = async (req) => {
+  
+  const token = req.headers.authorization;
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
+  const userData = await getUserData(decoded.nic);
+  if (!userData) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  const userId = userData.id;
+
+  try {
+
+    // Delete user from all related tables
+    await deleteUser(userId);
+    await deleteUserPortfolioData(userId);
+    await deleteUserStepsData(userId);
+    await deleteUserPackagesData(userId);
+    await deleteUserCoinBalance(userId);
+    await deleteFriendships(userId);
+    await deleteMessages(userId);
+    await deleteUserHarting(userId);
+
+    console.log(`User with ID ${userId} deleted successfully from all tables.`);
+  } catch (error) {
+   
+    console.error(`Error deleting user with ID ${userId}:`, error);
+    throw error;
+  } finally {
+  
+  }
+};
+
+const deleteUser = async (userId) => {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "DELETE FROM `users` WHERE `id` = ?",
+      [userId],
+      (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      }
+    );
+  });
+};
+
+const deleteUserPortfolioData = async (userId) => {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "DELETE FROM `register_user_portfolio_data` WHERE `userId` = ?",
+      [userId],
+      (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      }
+    );
+  });
+};
+
+const deleteUserStepsData = async (userId) => {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "DELETE FROM `register_steps_user_data` WHERE `userId` = ?",
+      [userId],
+      (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      }
+    );
+  });
+};
+
+const deleteUserPackagesData = async (userId) => {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "DELETE FROM `packagesbuydata` WHERE `userId` = ?",
+      [userId],
+      (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      }
+    );
+  });
+};
+
+const deleteUserCoinBalance = async (userId) => {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "DELETE FROM `coin_balance` WHERE `userId` = ?",
+      [userId],
+      (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      }
+    );
+  });
+};
+
+const deleteFriendships = async (userId) => {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "DELETE FROM `friendships` WHERE `user_id` = ? OR `friend_id` = ?",
+      [userId, userId],
+      (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      }
+    );
+  });
+};
+
+const deleteMessages = async (userId) => {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "DELETE FROM `messages` WHERE `sender_id` = ? OR `receiverId` = ?",
+      [userId, userId],
+      (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      }
+    );
+  });
+};
+
+const deleteUserHarting = async (userId) => {
+  return new Promise((resolve, reject) => {
+    db.query(
+      "DELETE FROM `user_harting` WHERE `user_id` = ? OR `friend_id` = ?",
+      [userId, userId],
+      (error, results) => {
+        if (error) return reject(error);
+        resolve(results);
+      }
+    );
+  });
+};
 
 module.exports = {
   register,
@@ -1095,5 +1233,6 @@ module.exports = {
   update_user_nic_images,
   getAllUsers,
   updateProfilePic,
-  getMessagessList
+  getMessagessList,
+  deleteUserData
 };
