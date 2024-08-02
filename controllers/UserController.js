@@ -305,19 +305,28 @@ const getMessagessList = async (req, res) => {
 
   try {
     // Execute the query to get the latest messages
-    db.query(messagesSql, [userId, userId, userId, userId], async (err, messagesResults) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
+    db.query(
+      messagesSql,
+      [userId, userId, userId, userId],
+      async (err, messagesResults) => {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
 
-      // Collect user details promises
-      const userDetailsPromises = messagesResults
-        .filter(message => message.receiverId != userId || message.sender_id != userId)
-        .map(message => {
-          console.log(message);
-          const friendId = message.receiverId != userId ? message.receiverId : message.sender_id;
-          console.log(friendId);
-          const userSql = `
+        // Collect user details promises
+        const userDetailsPromises = messagesResults
+          .filter(
+            (message) =>
+              message.receiverId != userId || message.sender_id != userId
+          )
+          .map((message) => {
+            console.log(message);
+            const friendId =
+              message.receiverId != userId
+                ? message.receiverId
+                : message.sender_id;
+            console.log(friendId);
+            const userSql = `
             SELECT DISTINCT  
               users.*, 
               register_user_portfolio_data.firstName, 
@@ -328,47 +337,43 @@ const getMessagessList = async (req, res) => {
             JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
             WHERE users.id = ?
           `;
-          return new Promise((resolve, reject) => {
-            db.query(userSql, [friendId], (err, userResults) => {
-              if (err) {
-                return reject(err);
-              }
-           
-              resolve({
-                friend: userResults[0],
-                lastMessage: {
-                  id: message.id,
-                  messageId: message.messageId,
-                  room_name: message.room_name,
-                  sender_id: message.sender_id,
-                  receiverId: message.receiverId,
-                  message: message.message,
-                  status: message.status,
-                  created_at: message.created_at
+            return new Promise((resolve, reject) => {
+              db.query(userSql, [friendId], (err, userResults) => {
+                if (err) {
+                  return reject(err);
                 }
-              }); // Assuming one result per user
+
+                resolve({
+                  friend: userResults[0],
+                  lastMessage: {
+                    id: message.id,
+                    messageId: message.messageId,
+                    room_name: message.room_name,
+                    sender_id: message.sender_id,
+                    receiverId: message.receiverId,
+                    message: message.message,
+                    status: message.status,
+                    created_at: message.created_at,
+                  },
+                }); // Assuming one result per user
+              });
             });
           });
-        });
 
-      try {
-        const messages = await Promise.all(userDetailsPromises);
-        return res.json(messages);
-      } catch (userDetailsError) {
-        console.error('Error fetching user details:', userDetailsError);
-        return res.status(500).json({ error: 'Internal server error' });
+        try {
+          const messages = await Promise.all(userDetailsPromises);
+          return res.json(messages);
+        } catch (userDetailsError) {
+          console.error("Error fetching user details:", userDetailsError);
+          return res.status(500).json({ error: "Internal server error" });
+        }
       }
-    });
-
+    );
   } catch (err) {
-    console.error('Error executing query:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("Error executing query:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
-
-
 
 const getHartingList = async (req, res) => {
   try {
@@ -552,39 +557,38 @@ const user_terms_agree = async (req, res) => {
 };
 
 const register_user_portfolio_data = async (req, res) => {
+  try {
+    // Extract token from the request headers
+    const token = req.headers.authorization;
 
-  try{
-  // Extract token from the request headers
-  const token = req.headers.authorization;
+    // Verify the token
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-  // Verify the token
-  const decoded = verifyToken(token);
-  if (!decoded) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
+    const userData = await getUserData(decoded.nic);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const userId = userData["id"];
 
-  const userData = await getUserData(decoded.nic);
-  if (!userData) {
-    return res.status(404).json({ message: "User not found" });
-  }
-  const userId = userData["id"];
+    const formData = req.body;
+    const pno = formData.whatsAppNumber;
+    console.log(formData);
+    // Check if the WhatsApp number already exists in the register_user_portfolio_data table
+    const checkQueryfirst =
+      "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ?";
+    db.query(checkQueryfirst, [pno], (err, results) => {
+      if (err) {
+        return res
+          .status(500)
+          .json({ message: "Database query error", error: err });
+      }
 
-  const formData = req.body;
-  const pno = formData.whatsAppNumber;
-  console.log(formData);
-  // Check if the WhatsApp number already exists in the register_user_portfolio_data table
-  // const checkQueryfirst = "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ?";
-  // db.query(checkQueryfirst, [pno], (err, results) => {
-  //   if (err) {
-  //     return res.status(500).json({ message: "Database query error", error: err });
-  //   }
-
-  //   if (results.length > 0) {
-  //     return res.status(409).send("WhatsApp number already exists");
-  //   }else{
-
-    // Check if a record with the given userId already exists
-
+      if (results.length > 0) {
+        return res.status(409).send("WhatsApp number already exists");
+      } else {
         // Record does not exist, perform insert
         const insertQuery = `
           INSERT INTO register_user_portfolio_data (
@@ -606,7 +610,7 @@ const register_user_portfolio_data = async (req, res) => {
           formData.address,
           formData.personalityDescription,
           formData.alcoholConsumption,
-          formData.lookingFor
+          formData.lookingFor,
         ];
 
         db.query(insertQuery, insertValues, (insertErr, insertResult) => {
@@ -617,12 +621,12 @@ const register_user_portfolio_data = async (req, res) => {
           console.log("Data inserted successfully");
           return res.status(200).send("Data inserted successfully");
         });
-  
-}catch (e){
-  console.log(e);
-}
+      }
+    });
+  } catch (e) {
+    console.log(e);
+  }
 };
-
 
 const update_register_user_portfolio_data = async (req, res) => {
   try {
@@ -900,7 +904,7 @@ const getAllUsersToHomepage = async (req, res) => {
         console.error("Error retrieving users: ", err);
         return res.status(500).json({ message: "Internal server error" });
       }
-     
+
       res.status(200).json(results);
     });
   } catch (error) {
@@ -1010,33 +1014,35 @@ const updateProfilePic = async (req, res) => {
   const { profilePic } = req.body;
 
   if (!userId || !profilePic) {
-    return res.status(400).json({ message: 'Missing userId or profilePic' });
+    return res.status(400).json({ message: "Missing userId or profilePic" });
   }
 
   try {
-    const sql = 'UPDATE register_steps_user_data SET profilePic = ? WHERE userId = ?';
+    const sql =
+      "UPDATE register_steps_user_data SET profilePic = ? WHERE userId = ?";
     const values = [profilePic, userId];
 
     db.query(sql, values, (err, results) => {
       if (err) {
-        console.error('Error updating profile picture:', err);
-        return res.status(500).json({ message: 'Error updating profile picture' });
+        console.error("Error updating profile picture:", err);
+        return res
+          .status(500)
+          .json({ message: "Error updating profile picture" });
       }
 
       if (results.affectedRows === 0) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: "User not found" });
       }
 
-      res.status(200).json({ message: 'Profile picture updated successfully' });
+      res.status(200).json({ message: "Profile picture updated successfully" });
     });
   } catch (error) {
-    console.error('Unexpected error:', error);
-    res.status(500).json({ message: 'Unexpected error occurred' });
+    console.error("Unexpected error:", error);
+    res.status(500).json({ message: "Unexpected error occurred" });
   }
 };
 
 const deleteUserData = async (req) => {
-  
   const token = req.headers.authorization;
   const decoded = verifyToken(token);
   if (!decoded) {
@@ -1050,7 +1056,6 @@ const deleteUserData = async (req) => {
   const userId = userData.id;
 
   try {
-
     // Delete user from all related tables
     await deleteUser(userId);
     await deleteUserPortfolioData(userId);
@@ -1063,11 +1068,9 @@ const deleteUserData = async (req) => {
 
     console.log(`User with ID ${userId} deleted successfully from all tables.`);
   } catch (error) {
-   
     console.error(`Error deleting user with ID ${userId}:`, error);
     throw error;
   } finally {
-  
   }
 };
 
@@ -1194,5 +1197,5 @@ module.exports = {
   getAllUsers,
   updateProfilePic,
   getMessagessList,
-  deleteUserData
+  deleteUserData,
 };
