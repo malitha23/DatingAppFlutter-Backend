@@ -1083,7 +1083,7 @@ socket.on("addHarting", async (data) => {
 
     // Validate input types
     if (typeof userId !== 'number' || typeof friendId !== 'number' || typeof isHarting !== 'number') {
-      socket.emit('error', { message: 'Invalid input types' });
+      console.log('error', { message: 'Invalid input types' });
       return;
     }
 
