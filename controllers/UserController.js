@@ -580,7 +580,7 @@ const register_user_portfolio_data = async (req, res) => {
 
     if (results.length > 0) {
       return res.status(409).send("WhatsApp number already exists");
-    }
+    }else{
 
     // Check if a record with the given userId already exists
     const checkQuery = "SELECT * FROM register_user_portfolio_data WHERE userId = ?";
@@ -673,6 +673,7 @@ const register_user_portfolio_data = async (req, res) => {
         });
       }
     });
+  }
   });
 };
 
