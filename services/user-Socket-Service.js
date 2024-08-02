@@ -1079,10 +1079,14 @@ r.userId AS friendrequestAddedfId,
 
 socket.on("addHarting", async (data) => {
   try {
-    const { userId, friendId, isHarting } = data;
+
+    // Extract and convert data from the incoming socket event
+    const userId = parseInt(data.userId, 10);
+    const friendId = parseInt(data.friendId, 10);
+    const isHarting = parseInt(data.isHarting, 10);
 
     // Validate input types
-    if (typeof userId !== 'number' || typeof friendId !== 'number' || typeof isHarting !== 'number') {
+    if (isNaN(userId) || isNaN(friendId) || isNaN(isHarting)) {
       console.log('error', { message: 'Invalid input types' });
       return;
     }
