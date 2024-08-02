@@ -575,31 +575,29 @@ const register_user_portfolio_data = async (req, res) => {
     "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ?";
   db.query(checkQueryfirst, [pno], (err, results) => {
     if (err) {
-      return res
-        .status(500)
-        .json({ message: "Database query error", error: err });
+      return res.status(500).json({ message: "Database query error", error: err });
     }
 
     if (results.length > 0) {
       // WhatsApp number already exists
       const updateQuery = `
-      UPDATE register_user_portfolio_data 
-      SET 
-        firstName = ?,
-        lastName = ?,
-        whatsAppNumber = ?,
-        job = ?,
-        location = ?,
-        marriageStatus = ?,
-        heightFt = ?,
-        heightIn = ?,
-        weight = ?,
-        address = ?,
-        personalityDescription = ?,
-        alcoholConsumption = ?
-        lookingFor= ?
-      WHERE userId = ?
-    `;
+        UPDATE register_user_portfolio_data 
+        SET 
+          firstName = ?,
+          lastName = ?,
+          whatsAppNumber = ?,
+          job = ?,
+          location = ?,
+          marriageStatus = ?,
+          heightFt = ?,
+          heightIn = ?,
+          weight = ?,
+          address = ?,
+          personalityDescription = ?,
+          alcoholConsumption = ?,
+          lookingFor = ?
+        WHERE userId = ?
+      `;
 
       const updateValues = [
         formData.firstName,
@@ -621,46 +619,44 @@ const register_user_portfolio_data = async (req, res) => {
       db.query(updateQuery, updateValues, (updateErr, updateResult) => {
         if (updateErr) {
           console.error("Error updating data: ", updateErr);
-          res.status(500).send("Error updating data");
-          return;
+          return res.status(500).send("Error updating data");
         }
         console.log("Data updated successfully");
-        res.status(200).send("Data updated successfully");
+        return res.status(200).send("Data updated successfully");
       });
+
+      return; // Exit to avoid sending another response
     }
 
     // Check if a record with the given userId already exists
-    const checkQuery = `
-    SELECT * FROM register_user_portfolio_data WHERE userId = ?
-  `;
+    const checkQuery = "SELECT * FROM register_user_portfolio_data WHERE userId = ?";
 
     db.query(checkQuery, [userId], (checkErr, checkResult) => {
       if (checkErr) {
         console.error("Error checking data: ", checkErr);
-        res.status(500).send("Error checking data");
-        return;
+        return res.status(500).send("Error checking data");
       }
 
       if (checkResult && checkResult.length > 0) {
         // Record exists, perform update
         const updateQuery = `
-        UPDATE register_user_portfolio_data 
-        SET 
-          firstName = ?,
-          lastName = ?,
-          whatsAppNumber = ?,
-          job = ?,
-          location = ?,
-          marriageStatus = ?,
-          heightFt = ?,
-          heightIn = ?,
-          weight = ?,
-          address = ?,
-          personalityDescription = ?,
-          alcoholConsumption = ?
-          lookingFor= ?
-        WHERE userId = ?
-      `;
+          UPDATE register_user_portfolio_data 
+          SET 
+            firstName = ?,
+            lastName = ?,
+            whatsAppNumber = ?,
+            job = ?,
+            location = ?,
+            marriageStatus = ?,
+            heightFt = ?,
+            heightIn = ?,
+            weight = ?,
+            address = ?,
+            personalityDescription = ?,
+            alcoholConsumption = ?,
+            lookingFor = ?
+          WHERE userId = ?
+        `;
 
         const updateValues = [
           formData.firstName,
@@ -682,19 +678,19 @@ const register_user_portfolio_data = async (req, res) => {
         db.query(updateQuery, updateValues, (updateErr, updateResult) => {
           if (updateErr) {
             console.error("Error updating data: ", updateErr);
-            res.status(500).send("Error updating data");
-            return;
+            return res.status(500).send("Error updating data");
           }
           console.log("Data updated successfully");
-          res.status(200).send("Data updated successfully");
+          return res.status(200).send("Data updated successfully");
         });
+
       } else {
         // Record does not exist, perform insert
         const insertQuery = `
-        INSERT INTO register_user_portfolio_data (
-          userId, firstName, lastName, whatsAppNumber, job, location, marriageStatus, heightFt, heightIn, weight, address, personalityDescription, alcoholConsumption, lookingFor
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
+          INSERT INTO register_user_portfolio_data (
+            userId, firstName, lastName, whatsAppNumber, job, location, marriageStatus, heightFt, heightIn, weight, address, personalityDescription, alcoholConsumption, lookingFor
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
 
         const insertValues = [
           userId,
@@ -716,16 +712,16 @@ const register_user_portfolio_data = async (req, res) => {
         db.query(insertQuery, insertValues, (insertErr, insertResult) => {
           if (insertErr) {
             console.error("Error inserting data: ", insertErr);
-            res.status(500).send("Error inserting data");
-            return;
+            return res.status(500).send("Error inserting data");
           }
           console.log("Data inserted successfully");
-          res.status(200).send("Data inserted successfully");
+          return res.status(200).send("Data inserted successfully");
         });
       }
     });
   });
 };
+
 
 const update_register_user_portfolio_data = async (req, res) => {
   try {
