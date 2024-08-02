@@ -594,24 +594,7 @@ const register_user_portfolio_data = async (req, res) => {
 
       if (checkResult && checkResult.length > 0) {
         // Record exists, perform update
-        const updateQuery = `
-          UPDATE register_user_portfolio_data 
-          SET 
-            firstName = ?,
-            lastName = ?,
-            whatsAppNumber = ?,
-            job = ?,
-            location = ?,
-            marriageStatus = ?,
-            heightFt = ?,
-            heightIn = ?,
-            weight = ?,
-            address = ?,
-            personalityDescription = ?,
-            alcoholConsumption = ?,
-            lookingFor = ?
-          WHERE userId = ?
-        `;
+        const updateQuery = `UPDATE register_user_portfolio_data SET firstName = ?, lastName = ?, whatsAppNumber = ?, job = ?, location = ?, marriageStatus = ?, heightFt = ?, heightIn = ?, weight = ?, address = ?, personalityDescription = ?, alcoholConsumption = ?, lookingFor = ? WHERE userId = ?`;
 
         const updateValues = [
           formData.firstName,
@@ -627,7 +610,7 @@ const register_user_portfolio_data = async (req, res) => {
           formData.personalityDescription,
           formData.alcoholConsumption,
           formData.lookingFor,
-          userId,
+          userId
         ];
 
         db.query(updateQuery, updateValues, (updateErr, updateResult) => {
@@ -661,7 +644,7 @@ const register_user_portfolio_data = async (req, res) => {
           formData.address,
           formData.personalityDescription,
           formData.alcoholConsumption,
-          formData.lookingFor,
+          formData.lookingFor
         ];
 
         db.query(insertQuery, insertValues, (insertErr, insertResult) => {
