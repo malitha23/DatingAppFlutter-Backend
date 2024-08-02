@@ -1085,11 +1085,7 @@ socket.on("addHarting", async (data) => {
     const friendId = parseInt(data.friendId, 10);
     const isHarting = parseInt(data.isHarting, 10);
 
-    // Validate input types
-    if (isNaN(userId) || isNaN(friendId) || isNaN(isHarting)) {
-      console.log('error', { message: 'Invalid input types' });
-      return;
-    }
+    
 
     const checkQueryString = `
       SELECT * FROM user_harting 
