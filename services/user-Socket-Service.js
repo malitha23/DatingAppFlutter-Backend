@@ -1081,10 +1081,9 @@ socket.on("addHarting", async (data) => {
   try {
 
     // Extract and convert data from the incoming socket event
-    const userId = parseInt(data.userId, 10);
-    const friendId = parseInt(data.friendId, 10);
-    const isHarting = parseInt(data.isHarting, 10);
-
+    const userId = data.userId;
+    const friendId = data.friendId;
+    const isHarting = data.isHarting;
     
 
     const checkQueryString = `
