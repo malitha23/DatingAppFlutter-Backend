@@ -552,6 +552,8 @@ const user_terms_agree = async (req, res) => {
 };
 
 const register_user_portfolio_data = async (req, res) => {
+
+  try{
   // Extract token from the request headers
   const token = req.headers.authorization;
 
@@ -569,16 +571,15 @@ const register_user_portfolio_data = async (req, res) => {
 
   const formData = req.body;
   const pno = formData.whatsAppNumber;
-
   // Check if the WhatsApp number already exists in the register_user_portfolio_data table
   const checkQueryfirst =
-    "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ?";
-  db.query(checkQueryfirst, [pno], (err, results) => {
+    "SELECT * FROM register_user_portfolio_data WHERE whatsAppNumber = ? AND userId = ?";
+  db.query(checkQueryfirst, [pno,userId], (err, results) => {
     if (err) {
       return res.status(500).json({ message: "Database query error", error: err });
     }
 
-    if (results.length > 0) {
+    if (results.length <= 0) {
       return res.status(409).send("WhatsApp number already exists");
     }else{
 
@@ -675,6 +676,9 @@ const register_user_portfolio_data = async (req, res) => {
     });
   }
   });
+}catch (e){
+  console.log(e);
+}
 };
 
 
