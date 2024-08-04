@@ -884,7 +884,7 @@ const getAllUsersToHomepage = async (req, res) => {
     const age = req.query.age || "";
     const limit = parseInt(req.query.limit) || 15; // Default limit to 15 if not provided
     const offset = parseInt(req.query.offset) || 0; // Default offset to 0 if not provided
-
+console.log(limit);
     let ageLowerBound = "";
     let ageUpperBound = "";
 
@@ -1031,7 +1031,7 @@ const getAllUsersToHomepage = async (req, res) => {
         console.error("Error retrieving users: ", err);
         return res.status(500).json({ message: "Internal server error" });
       }
-
+      console.log(results);
       res.status(200).json(results);
     });
   } catch (error) {
