@@ -1,6 +1,8 @@
 const database = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const fs = require('fs-extra');
+const path = require('path');
 
 const db = database.connection;
 
@@ -116,6 +118,8 @@ const getUserData = (nic) => {
     rsud.interests,
     rsud.profilePic,
     rsud.otherImages,
+    rsud.nicFrontImage,
+    rsud.nicBackImage,
     rsud.terms_agree,
     rupd.id AS rupd_id,
     rupd.userId AS rupd_userId,
@@ -401,63 +405,38 @@ const getHartingList = async (req, res) => {
   }
 };
 
-const register_steps_user_data = async (req, res) => {
-  // Extract token from the request headers
-  const token = req.headers.authorization;
-
-  // Verify the token
-  const decoded = verifyToken(token);
-  if (!decoded) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const userData = await getUserData(decoded.nic);
-  if (!userData) {
-    return res.status(404).json({ message: "User not found" });
-  }
-  const userId = userData["id"];
-
-  // Extract the remaining data from the request body
-  const { gender, age, birthday, interests, profilePic, otherImages } =
-    req.body;
-  // Check if the userId already exists in the table
+const register_steps_user_data = async (userId, data) => {
+  const { gender, age, birthday, interests, profilePic, otherImages, terms_agree } = data;
+  const interestsnew = interests != 'null' ? interests : '[]';
   const checkSql = "SELECT * FROM register_steps_user_data WHERE userId = ?";
   db.query(checkSql, [userId], (checkErr, checkResults) => {
     if (checkErr) {
       console.error(checkErr);
-      return res.status(500).send("Error checking user data");
+      return;
     }
+    const updateValues = [
+      gender,
+      age,
+      birthday,
+      interestsnew,
+      profilePic,
+      JSON.stringify(otherImages),
+      terms_agree,
+      userId,
+    ];
 
-    // If userId exists, update the record
     if (checkResults.length > 0) {
       const updateSql = `UPDATE register_steps_user_data SET 
                            gender = ?, age = ?, birthday = ?, interests = ?, 
                            profilePic = ?, otherImages = ?, terms_agree = ?
                          WHERE userId = ?`;
 
-      const updateValues = [
-        gender,
-        age,
-        birthday,
-        JSON.stringify(interests), // Convert interests to JSON string
-        profilePic,
-        JSON.stringify(otherImages), // Convert otherImages to JSON string
-        0,
-        userId,
-      ];
-
-      db.query(updateSql, updateValues, (updateErr, updateResult) => {
+      db.query(updateSql, updateValues, (updateErr) => {
         if (updateErr) {
           console.error(updateErr);
-          return res.status(500).send("Error updating user data");
         }
-        // Send success response
-        return res
-          .status(200)
-          .json({ message: "User data updated successfully" });
       });
     } else {
-      // If userId does not exist, insert a new record
       const insertSql = `INSERT INTO register_steps_user_data (userId, gender, age, birthday, interests, profilePic, otherImages, terms_agree)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
@@ -466,56 +445,204 @@ const register_steps_user_data = async (req, res) => {
         gender,
         age,
         birthday,
-        JSON.stringify(interests), // Convert interests to JSON string
+        interestsnew,
         profilePic,
-        JSON.stringify(otherImages), // Convert otherImages to JSON string
-        0,
+        JSON.stringify(otherImages),
+        terms_agree,
       ];
 
-      db.query(insertSql, insertValues, (insertErr, insertResult) => {
+      db.query(insertSql, insertValues, (insertErr) => {
         if (insertErr) {
           console.error(insertErr);
-          return res.status(500).send("Error inserting user data");
         }
-        // Send success response
-        return res
-          .status(200)
-          .json({ message: "User data inserted successfully" });
       });
     }
   });
 };
 
-const update_user_nic_images = async (req, res) => {
-  // Extract token from the request headers
-  const token = req.headers.authorization;
 
-  // Verify the token
-  const decoded = verifyToken(token);
-  if (!decoded) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
+// const register_steps_user_data = async (req, res) => {
+//   console.log(req.body);
+//   try {
+//     const token = req.headers.authorization;
+//     const decoded = verifyToken(token);
+//     if (!decoded) {
+//       return res.status(401).json({ message: "Unauthorized" });
+//     }
 
-  const userData = await getUserData(decoded.nic);
-  if (!userData) {
-    return res.status(404).json({ message: "User not found" });
-  }
-  const userId = userData["id"];
+//     const userData = await getUserData(decoded.nic);
+//     if (!userData) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+//     const userId = userData["id"];
 
-  const { frontImage, backImage } = req.body;
+//     // Extract remaining data from the request body
+//     const { gender, age, birthday, interests, terms_agree } = req.body;
+//     const profilePic = req.files.profilePic ? req.files.profilePic[0].path : null;
+//     const otherImages = req.files.otherImages ? req.files.otherImages.map(file => file.path) : [];
 
-  const sql = `UPDATE register_steps_user_data SET nicFrontImage =?, nicBackImage=? WHERE userId = ?`;
-  db.query(sql, [frontImage, backImage, userId], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ message: "Database error" });
-    }
+//     const checkSql = "SELECT * FROM register_steps_user_data WHERE userId = ?";
+//     db.query(checkSql, [userId], (checkErr, checkResults) => {
+//       if (checkErr) {
+//         console.error(checkErr);
+//         return res.status(500).send("Error checking user data");
+//       }
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
+//       if (checkResults.length > 0) {
+//         const updateSql = `UPDATE register_steps_user_data SET 
+//                              gender = ?, age = ?, birthday = ?, interests = ?, 
+//                              profilePic = ?, otherImages = ?, terms_agree = ?
+//                            WHERE userId = ?`;
 
-    res.status(200).json({ message: "User Nic Data updated successfully" });
+//         const updateValues = [
+//           gender,
+//           age,
+//           birthday,
+//           JSON.stringify(interests),
+//           profilePic,
+//           JSON.stringify(otherImages),
+//           terms_agree,
+//           userId,
+//         ];
+
+//         db.query(updateSql, updateValues, (updateErr, updateResult) => {
+//           if (updateErr) {
+//             console.error(updateErr);
+//             return res.status(500).send("Error updating user data");
+//           }
+//           return res.status(200).json({ message: "User data updated successfully" });
+//         });
+//       } else {
+//         const insertSql = `INSERT INTO register_steps_user_data (userId, gender, age, birthday, interests, profilePic, otherImages, terms_agree)
+//                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+//         const insertValues = [
+//           userId,
+//           gender,
+//           age,
+//           birthday,
+//           JSON.stringify(interests),
+//           profilePic,
+//           JSON.stringify(otherImages),
+//           terms_agree,
+//         ];
+
+//         db.query(insertSql, insertValues, (insertErr, insertResult) => {
+//           if (insertErr) {
+//             console.error(insertErr);
+//             return res.status(500).send("Error inserting user data");
+//           }
+//           return res.status(200).json({ message: "User data inserted successfully" });
+//         });
+//       }
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: "An error occurred. Please try again." });
+//   }
+// };
+
+// const register_steps_user_data = async (req, res) => {
+//   // Extract token from the request headers
+//   const token = req.headers.authorization;
+
+//   // Verify the token
+//   const decoded = verifyToken(token);
+//   if (!decoded) {
+//     return res.status(401).json({ message: "Unauthorized" });
+//   }
+
+//   const userData = await getUserData(decoded.nic);
+//   if (!userData) {
+//     return res.status(404).json({ message: "User not found" });
+//   }
+//   const userId = userData["id"];
+
+//   // Extract the remaining data from the request body
+//   const { gender, age, birthday, interests, profilePic, otherImages } =
+//     req.body;
+//   // Check if the userId already exists in the table
+//   const checkSql = "SELECT * FROM register_steps_user_data WHERE userId = ?";
+//   db.query(checkSql, [userId], (checkErr, checkResults) => {
+//     if (checkErr) {
+//       console.error(checkErr);
+//       return res.status(500).send("Error checking user data");
+//     }
+
+//     // If userId exists, update the record
+//     if (checkResults.length > 0) {
+//       const updateSql = `UPDATE register_steps_user_data SET 
+//                            gender = ?, age = ?, birthday = ?, interests = ?, 
+//                            profilePic = ?, otherImages = ?, terms_agree = ?
+//                          WHERE userId = ?`;
+
+//       const updateValues = [
+//         gender,
+//         age,
+//         birthday,
+//         JSON.stringify(interests), // Convert interests to JSON string
+//         profilePic,
+//         JSON.stringify(otherImages), // Convert otherImages to JSON string
+//         0,
+//         userId,
+//       ];
+
+//       db.query(updateSql, updateValues, (updateErr, updateResult) => {
+//         if (updateErr) {
+//           console.error(updateErr);
+//           return res.status(500).send("Error updating user data");
+//         }
+//         // Send success response
+//         return res
+//           .status(200)
+//           .json({ message: "User data updated successfully" });
+//       });
+//     } else {
+//       // If userId does not exist, insert a new record
+//       const insertSql = `INSERT INTO register_steps_user_data (userId, gender, age, birthday, interests, profilePic, otherImages, terms_agree)
+//                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+//       const insertValues = [
+//         userId,
+//         gender,
+//         age,
+//         birthday,
+//         JSON.stringify(interests), // Convert interests to JSON string
+//         profilePic,
+//         JSON.stringify(otherImages), // Convert otherImages to JSON string
+//         0,
+//       ];
+
+//       db.query(insertSql, insertValues, (insertErr, insertResult) => {
+//         if (insertErr) {
+//           console.error(insertErr);
+//           return res.status(500).send("Error inserting user data");
+//         }
+//         // Send success response
+//         return res
+//           .status(200)
+//           .json({ message: "User data inserted successfully" });
+//       });
+//     }
+//   });
+// };
+
+const update_user_nic_images = async (userId, { frontImage, backImage }) => {
+  const sql = `UPDATE register_steps_user_data SET nicFrontImage = ?, nicBackImage = ? WHERE userId = ?`;
+
+  return new Promise((resolve, reject) => {
+    db.query(sql, [frontImage, backImage, userId], (err, result) => {
+      if (err) {
+        console.error(err);
+        return reject(new Error("Database error"));
+      }
+
+      if (result.affectedRows === 0) {
+        return reject(new Error("User not found"));
+      }
+
+      resolve("User NIC data updated successfully");
+    });
   });
 };
 
@@ -1009,38 +1136,56 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-const updateProfilePic = async (req, res) => {
-  const { userId } = req.params;
-  const { profilePic } = req.body;
+// const updateProfilePic = async (req, res) => {
+//   const { userId } = req.params;
+//   const { profilePic } = req.body;
 
-  if (!userId || !profilePic) {
-    return res.status(400).json({ message: "Missing userId or profilePic" });
-  }
+//   if (!userId || !profilePic) {
+//     return res.status(400).json({ message: "Missing userId or profilePic" });
+//   }
 
+//   try {
+//     const sql =
+//       "UPDATE register_steps_user_data SET profilePic = ? WHERE userId = ?";
+//     const values = [profilePic, userId];
+
+//     db.query(sql, values, (err, results) => {
+//       if (err) {
+//         console.error("Error updating profile picture:", err);
+//         return res
+//           .status(500)
+//           .json({ message: "Error updating profile picture" });
+//       }
+
+//       if (results.affectedRows === 0) {
+//         return res.status(404).json({ message: "User not found" });
+//       }
+
+//       res.status(200).json({ message: "Profile picture updated successfully" });
+//     });
+//   } catch (error) {
+//     console.error("Unexpected error:", error);
+//     res.status(500).json({ message: "Unexpected error occurred" });
+//   }
+// };
+
+const updateProfilePic = async (userId, updateData) => {
   try {
-    const sql =
-      "UPDATE register_steps_user_data SET profilePic = ? WHERE userId = ?";
-    const values = [profilePic, userId];
+    // Assuming you have a table named 'users' with a column 'profilePic'
+    const result = await db.query('UPDATE register_steps_user_data SET profilePic = ? WHERE userId = ?', [updateData.profilePic, userId]);
 
-    db.query(sql, values, (err, results) => {
-      if (err) {
-        console.error("Error updating profile picture:", err);
-        return res
-          .status(500)
-          .json({ message: "Error updating profile picture" });
-      }
-
-      if (results.affectedRows === 0) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      res.status(200).json({ message: "Profile picture updated successfully" });
-    });
+    // Check if the update was successful
+    if (result.affectedRows > 0) {
+      return { success: true, message: 'Profile picture updated successfully' };
+    } else {
+      return { success: false, message: 'Failed to update profile picture' };
+    }
   } catch (error) {
-    console.error("Unexpected error:", error);
-    res.status(500).json({ message: "Unexpected error occurred" });
+    console.error('Error updating profile picture:', error);
+    throw new Error('Internal server error');
   }
 };
+
 
 const deleteUserData = async (req) => {
   const token = req.headers.authorization;
@@ -1056,6 +1201,7 @@ const deleteUserData = async (req) => {
   const userId = userData.id;
 
   try {
+    await deleteUserImageFolder(userId);
     // Delete user from all related tables
     await deleteUser(userId);
     await deleteUserPortfolioData(userId);
@@ -1074,6 +1220,20 @@ const deleteUserData = async (req) => {
   }
 };
 
+const deleteUserImageFolder = async (userId) => {
+  try {
+    const userDir = path.join(__dirname, '../uploadsImages', userId.toString());
+    if (fs.existsSync(userDir)) {
+      await fs.remove(userDir);
+      console.log(`User image folder for user ID ${userId} deleted successfully.`);
+    } else {
+      console.log(`No image folder found for user ID ${userId}.`);
+    }
+  } catch (error) {
+    console.error(`Error deleting image folder for user ID ${userId}:`, error);
+    throw error;
+  }
+};
 const deleteUser = async (userId) => {
   return new Promise((resolve, reject) => {
     db.query(
