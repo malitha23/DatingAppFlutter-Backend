@@ -25,6 +25,7 @@ const authRoutePackages = require("./routes/packages");
 const authRouteAdmin= require("./routes/admin");
 const authRouteForgetpassword = require("./routes/forgetpassword");
 const authRouteSubscriptionPlans = require("./routes/subscriptionPlans");
+const { pusher, sendHartingNotification } = require('./services/pusherService'); // Import the pusher instance and function
 
 app.get("/", (req, res) => res.send("Hello World!"));
 app.use("/api/user", authRoute);
@@ -33,6 +34,34 @@ app.use("/api/packages", authRoutePackages);
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use("/api/forgetpassword", authRouteForgetpassword);
 app.use("/api/subscriptionPlans", authRouteSubscriptionPlans);
+
+
+// Pusher authentication endpoint
+app.post('/api/pusher/auth', (req, res) => {
+  const socketId = req.body.socket_id;
+  const channelName = req.body.channel_name;
+  const userId = req.body.user_id;
+
+  // Validate userId and channelName as necessary
+  const auth = pusher.authenticate(socketId, channelName, {
+    user_id: userId,
+  });
+
+  res.send(auth);
+});
+
+// Endpoint to send notification
+app.post('/send-notification', async (req, res) => {
+  const { friendId, data } = req.body;
+
+  try {
+    await sendHartingNotification(friendId, data);
+    res.status(200).send('Notification sent successfully');
+  } catch (error) {
+    res.status(500).send('Error sending notification');
+  }
+});
+
 app.use(authMiddleware);
 app.use("/api/admin", authRouteAdmin);
 

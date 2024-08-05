@@ -324,7 +324,6 @@ WHERE m.sender_id = ? OR m.receiverId = ?
               message.receiverId != userId || message.sender_id != userId
           )
           .map((message) => {
-            console.log(message);
             const friendId =
               message.receiverId != userId
                 ? message.receiverId

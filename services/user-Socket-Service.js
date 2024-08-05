@@ -1,6 +1,6 @@
 // socketService.js
 const util = require("util");
-
+const { sendHartingNotification } = require('./pusherService.js');
 module.exports = function (io, db, users) {
   const query = util.promisify(db.query).bind(db);
 
@@ -859,262 +859,113 @@ r.userId AS friendrequestAddedfId,
       }
     });
 
-    // Assuming you have a Socket.io server set up in your Node.js app
-
-    // socket.on("addHarting", async (data) => {
-    //   console.log(data);
-    //   try {
-    //     // Extract data from the incoming socket event
-    //     const { userId, friendId, isHarting } = data;
-
-    //     // Check if the combination of user_id and friend_id exists
-    //     const checkQueryString = `
-    //             SELECT * FROM user_harting
-    //             WHERE user_id = ? AND friend_id = ?
-    //         `;
-
-    //     // Execute the query to check for the existence of the combination
-    //     db.query(checkQueryString, [userId, friendId], async (err, result) => {
-    //       if (err) {
-    //         console.error("Database error:", err);
-    //         socket.emit("error", { message: "Internal server error" });
-    //         return;
-    //       }
-
-    //       // Check the count result
-    //       if (result.length <= 0) {
-    //         // If the count is 0, perform an INSERT
-    //         const insertQueryString = `
-    //                 INSERT INTO user_harting (user_id, friend_id, is_harting)
-    //                 VALUES (?, ?, ?)
-    //             `;
-    //         await db.query(insertQueryString, [userId, friendId, isHarting]);
-    //       } else {
-    //         // If the count is 1, perform an UPDATE
-    //         const updateQueryString = `
-    //                 UPDATE user_harting
-    //                 SET is_harting = ?
-    //                 WHERE user_id = ? AND friend_id = ?
-    //             `;
-    //         await db.query(updateQueryString, [isHarting, userId, friendId]);
-    //       }
-    //     });
-
-    //     const getLikedUserData = `SELECT DISTINCT
-    //    r.firstName AS hartAddedfname, r.lastName AS hartAddedLname,
-    //     users.nic, users.online, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic, register_steps_user_data.age, register_steps_user_data.gender,  hart.id AS hartingId, hart.user_id AS hartAddedId, hart.friend_id, hart.is_harting, hart.created_at
-    //      FROM users
-    //      JOIN user_harting hart ON users.id = hart.friend_id
-    //      JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId
-    //      JOIN register_user_portfolio_data r ON hart.user_id = r.userId
-    //      JOIN register_steps_user_data ON users.id = register_steps_user_data.userId
-    //      WHERE users.id = ?`;
-
-    //     db.query(getLikedUserData, [friendId], async (err, result) => {
-    //       if (err) {
-    //         console.error("Database error:", err);
-    //         return;
-    //       }
-    //       // Iterate over the result array
-    //       for (let i = 0; i < result.length; i++) {
-    //         const row = result[i];
-
-    //         // Access specific column data from the row
-    //         const nic = row.nic;
-    //         const online = row.online;
-    //         const firstName = row.firstName;
-    //         const hartAddedfname = row.hartAddedfname;
-    //         const lastName = row.lastName;
-    //         const profilePic = row.profilePic;
-    //         const age = row.age;
-    //         const gender = row.gender;
-    //         const hartingId = row.hartingId;
-    //         const friendId = row.friend_id;
-    //         // const isHarting = row.is_harting;
-    //         const createdAt = row.created_at;
-
-    //         // // Log the specific column data
-    //         // console.log("NIC:", nic);
-    //         // console.log("Online:", online);
-    //         // console.log("First Name:", firstName);
-    //         // console.log("Last Name:", lastName);
-    //         // console.log("Profile Pic:", profilePic);
-    //         // console.log("Age:", age);
-    //         // console.log("Gender:", gender);
-    //         // console.log("Harting ID:", hartingId);
-    //         // console.log("Friend ID:", friendId);
-    //         // console.log("Is Harting:", isHarting);
-    //         // console.log("Created At:", createdAt);
-
-    //         const socketId = users[userId];
-    //         if (socketId) {
-    //           io.to(socketId).emit("hartingadded", {
-    //             nic,
-    //             online,
-    //             firstName,
-    //             lastName,
-    //             profilePic,
-    //             age,
-    //             gender,
-    //             hartingId,
-    //             friendId,
-    //             isHarting,
-    //             createdAt,
-    //           });
-    //           console.log(`Emitted to socket ID: ${socketId}`);
-    //         } else {
-    //           console.error(`No socket found for userId: ${userId}`);
-    //         }
-
-    //         const friendSocketId = users[friendId];
-    //         if (friendSocketId) {
-    //           io.to(friendSocketId).emit("hartingadded", {
-    //             userId,
-    //             friendId,
-    //             isHarting,
-    //             hartAddedfname,
-    //           });
-    //           console.log(`Emitted to friend socket ID: ${friendSocketId}`);
-    //         } else {
-    //           console.error(`No socket found for friendId: ${friendId}`);
-    //         }
-    //       }
-    //     });
-    //   } catch (error) {
-    //     // Handle errors by logging them
-    //     console.error("Error handling harting:", error);
-    //     // Optionally, send an error acknowledgment back to the client
-    //     // socket.emit('hartingAdded', { success: false, error: error.message });
-    //   }
-    // });
-
     socket.on("addHarting", async (data) => {
       try {
-        // Extract data from the incoming socket event
         const { userId, friendId, isHarting } = data;
-
+    
+        // Function to check if a user-harting relationship exists
+        const checkIfExists = async (userId, friendId) => {
+          const query = `SELECT * FROM user_harting WHERE user_id = ? AND friend_id = ?`;
+          return new Promise((resolve, reject) => {
+            db.query(query, [userId, friendId], (err, result) => {
+              if (err) reject(err);
+              else resolve(result);
+            });
+          });
+        };
+    
+        // Function to insert a new user-harting relationship
+        const insertHarting = async (userId, friendId, isHarting) => {
+          const query = `INSERT INTO user_harting (user_id, friend_id, is_harting) VALUES (?, ?, ?)`;
+          return new Promise((resolve, reject) => {
+            db.query(query, [userId, friendId, isHarting], (err, result) => {
+              if (err) reject(err);
+              else resolve(result);
+            });
+          });
+        };
+    
+        // Function to update an existing user-harting relationship
+        const updateHarting = async (userId, friendId, isHarting) => {
+          const query = `UPDATE user_harting SET is_harting = ? WHERE user_id = ? AND friend_id = ?`;
+          return new Promise((resolve, reject) => {
+            db.query(query, [isHarting, userId, friendId], (err, result) => {
+              if (err) reject(err);
+              else resolve(result);
+            });
+          });
+        };
+    
+        // Function to get liked user data
+        const getLikedUserData = async (friendId, userId) => {
+          const query = `
+            SELECT DISTINCT
+              r.firstName AS hartAddedfname, 
+              r.lastName AS hartAddedLname,
+              users.nic, 
+              users.online, 
+              register_user_portfolio_data.firstName, 
+              register_user_portfolio_data.lastName, 
+              register_steps_user_data.profilePic, 
+              register_steps_user_data.age, 
+              register_steps_user_data.gender,  
+              hart.id AS hartingId, 
+              hart.user_id AS hartAddedId, 
+              hart.friend_id, 
+              hart.is_harting, 
+              hart.created_at
+            FROM users 
+            JOIN user_harting hart ON users.id = hart.friend_id
+            JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
+            JOIN register_user_portfolio_data r ON hart.user_id = r.userId 
+            JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+            WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
+          `;
+          return new Promise((resolve, reject) => {
+            db.query(query, [friendId, userId, friendId], (err, result) => {
+              if (err) reject(err);
+              else resolve(result);
+            });
+          });
+        };
+    
         // Check if the combination of user_id and friend_id exists
-        const checkQueryString = `
-                SELECT * FROM user_harting 
-                WHERE user_id = ? AND friend_id = ?
-            `;
-
-        // Execute the query to check for the existence of the combination
-        db.query(checkQueryString, [userId, friendId], async (err, result) => {
-          if (err) {
-            console.error("Database error:", err);
-            return;
-          }
-          // Check the count result
-          if (result.length <= 0) {
-            // If the count is 0, perform an INSERT
-            const insertQueryString = `
-                    INSERT INTO user_harting (user_id, friend_id, is_harting) 
-                    VALUES (?, ?, ?)
-                `;
-            await db.query(insertQueryString, [userId, friendId, isHarting]);
+        const existingHarting = await checkIfExists(userId, friendId);
+    
+        if (existingHarting.length <= 0) {
+          // Perform an INSERT if the relationship does not exist
+          await insertHarting(userId, friendId, isHarting);
+        } else {
+          // Perform an UPDATE if the relationship already exists
+          await updateHarting(userId, friendId, isHarting);
+        }
+    
+        // Get the liked user data
+        const likedUserData = await getLikedUserData(friendId, userId);
+    
+        if (likedUserData.length > 0) {
+          const row = likedUserData[0];
+          const {
+            nic, online, firstName, lastName, profilePic,
+            age, gender, hartingId, friend_id: friendId, created_at: createdAt,
+          } = row;
+          const socketId = users[userId];
+          if (socketId) {
+            io.to(socketId).emit("hartingadded", {
+              nic, online, firstName, lastName, profilePic,
+              age, gender, hartingId, friendId, isHarting, createdAt,
+            });
+            sendHartingNotification(userId, { row });
+            console.log(`Emitted to User socket ID: ${socketId}`);
           } else {
-            // If the count is 1, perform an UPDATE
-            const updateQueryString = `
-                    UPDATE user_harting 
-                    SET is_harting = ?
-                    WHERE user_id = ? AND friend_id = ?
-                `;
-            await db.query(updateQueryString, [isHarting, userId, friendId]);
+            console.error(`No socket found for userId: ${userId}`);
           }
-        });
-        const getLikedUserData = `SELECT DISTINCT
-       r.firstName AS hartAddedfname, 
-       r.lastName AS hartAddedLname,
-       users.nic, 
-       users.online, 
-       register_user_portfolio_data.firstName, 
-       register_user_portfolio_data.lastName, 
-       register_steps_user_data.profilePic, 
-       register_steps_user_data.age, 
-       register_steps_user_data.gender,  
-       hart.id AS hartingId, 
-       hart.user_id AS hartAddedId, 
-       hart.friend_id, 
-       hart.is_harting, 
-       hart.created_at
-FROM users 
-JOIN user_harting hart ON users.id = hart.friend_id
-JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-JOIN register_user_portfolio_data r ON hart.user_id = r.userId 
-JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
-WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
-`;
-
-        db.query(
-          getLikedUserData,
-          [friendId, userId, friendId],
-          async (err, result) => {
-            if (err) {
-              console.error("Database error:", err);
-              return;
-            }
-
-            // Iterate over the result array
-            for (let i = 0; i < result.length; i++) {
-              const row = result[i];
-
-              // Access specific column data from the row
-              const nic = row.nic;
-              const online = row.online;
-              const firstName = row.firstName;
-              const hartAddedfname = row.hartAddedfname;
-              const lastName = row.lastName;
-              const profilePic = row.profilePic;
-              const age = row.age;
-              const gender = row.gender;
-              const hartingId = row.hartingId;
-              const friendId = row.friend_id;
-              // const isHarting = row.is_harting;
-              const createdAt = row.created_at;
-
-              const socketId = users[userId];
-              if (socketId) {
-                io.to(socketId).emit("hartingadded", {
-                  nic,
-                  online,
-                  firstName,
-                  lastName,
-                  profilePic,
-                  age,
-                  gender,
-                  hartingId,
-                  friendId,
-                  isHarting,
-                  createdAt,
-                });
-                console.log(`Emitted to User socket ID: ${socketId}`);
-              } else {
-                console.error(`No socket found for userId: ${userId}`);
-              }
-
-              // const friendSocketId = users[friendId];
-              // if (friendSocketId) {
-              //   io.to(friendSocketId).emit("hartingadded", {
-              //     userId,
-              //     friendId,
-              //     isHarting,
-              //     hartAddedfname,
-              //   });
-              //   console.log(`Emitted to friend socket ID: ${friendSocketId}`);
-              // } else {
-              //   console.error(`No socket found for friendId: ${friendId}`);
-              // }
-            }
-          }
-        );
+        }
       } catch (error) {
-        // Handle errors by logging them
         console.error("Error handling harting:", error);
-        // Optionally, send an error acknowledgment back to the client
-        // socket.emit('hartingAdded', { success: false, error: error.message });
       }
     });
+    
 
     // Listen for the 'friendsRequestAcceptOrReject' event
     socket.on("friendsRequestAcceptOrReject", (data) => {
