@@ -1,8 +1,8 @@
 const database = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const fs = require('fs-extra');
-const path = require('path');
+const fs = require("fs-extra");
+const path = require("path");
 
 const db = database.connection;
 
@@ -296,16 +296,16 @@ const getMessagessList = async (req, res) => {
   // Define the SQL query to get the latest messages
   const messagesSql = `
     SELECT m.*
-    FROM messages m
-    INNER JOIN (
-      SELECT room_name, MAX(created_at) AS max_created_at
-      FROM messages
-      WHERE sender_id = ? OR receiverId = ?
-      GROUP BY room_name
-    ) latest
-    ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
-    WHERE m.sender_id = ? OR m.receiverId = ?
-    ORDER BY m.id DESC`;
+FROM messages m
+INNER JOIN (
+  SELECT room_name, MAX(id) AS max_id
+  FROM messages
+  WHERE sender_id = ? OR receiverId = ?
+  GROUP BY room_name
+) latest
+ON m.id = latest.max_id
+WHERE m.sender_id = ? OR m.receiverId = ?
+`;
 
   try {
     // Execute the query to get the latest messages
@@ -406,8 +406,16 @@ const getHartingList = async (req, res) => {
 };
 
 const register_steps_user_data = async (userId, data) => {
-  const { gender, age, birthday, interests, profilePic, otherImages, terms_agree } = data;
-  const interestsnew = interests != 'null' ? interests : '[]';
+  const {
+    gender,
+    age,
+    birthday,
+    interests,
+    profilePic,
+    otherImages,
+    terms_agree,
+  } = data;
+  const interestsnew = interests != "null" ? interests : "[]";
   const checkSql = "SELECT * FROM register_steps_user_data WHERE userId = ?";
   db.query(checkSql, [userId], (checkErr, checkResults) => {
     if (checkErr) {
@@ -460,7 +468,6 @@ const register_steps_user_data = async (userId, data) => {
   });
 };
 
-
 // const register_steps_user_data = async (req, res) => {
 //   console.log(req.body);
 //   try {
@@ -489,8 +496,8 @@ const register_steps_user_data = async (userId, data) => {
 //       }
 
 //       if (checkResults.length > 0) {
-//         const updateSql = `UPDATE register_steps_user_data SET 
-//                              gender = ?, age = ?, birthday = ?, interests = ?, 
+//         const updateSql = `UPDATE register_steps_user_data SET
+//                              gender = ?, age = ?, birthday = ?, interests = ?,
 //                              profilePic = ?, otherImages = ?, terms_agree = ?
 //                            WHERE userId = ?`;
 
@@ -571,8 +578,8 @@ const register_steps_user_data = async (userId, data) => {
 
 //     // If userId exists, update the record
 //     if (checkResults.length > 0) {
-//       const updateSql = `UPDATE register_steps_user_data SET 
-//                            gender = ?, age = ?, birthday = ?, interests = ?, 
+//       const updateSql = `UPDATE register_steps_user_data SET
+//                            gender = ?, age = ?, birthday = ?, interests = ?,
 //                            profilePic = ?, otherImages = ?, terms_agree = ?
 //                          WHERE userId = ?`;
 
@@ -1172,20 +1179,22 @@ const getAllUsers = async (req, res) => {
 const updateProfilePic = async (userId, updateData) => {
   try {
     // Assuming you have a table named 'users' with a column 'profilePic'
-    const result = await db.query('UPDATE register_steps_user_data SET profilePic = ? WHERE userId = ?', [updateData.profilePic, userId]);
+    const result = await db.query(
+      "UPDATE register_steps_user_data SET profilePic = ? WHERE userId = ?",
+      [updateData.profilePic, userId]
+    );
 
     // Check if the update was successful
     if (result.affectedRows > 0) {
-      return { success: true, message: 'Profile picture updated successfully' };
+      return { success: true, message: "Profile picture updated successfully" };
     } else {
-      return { success: false, message: 'Failed to update profile picture' };
+      return { success: false, message: "Failed to update profile picture" };
     }
   } catch (error) {
-    console.error('Error updating profile picture:', error);
-    throw new Error('Internal server error');
+    console.error("Error updating profile picture:", error);
+    throw new Error("Internal server error");
   }
 };
-
 
 const deleteUserData = async (req) => {
   const token = req.headers.authorization;
@@ -1222,10 +1231,12 @@ const deleteUserData = async (req) => {
 
 const deleteUserImageFolder = async (userId) => {
   try {
-    const userDir = path.join(__dirname, '../uploadsImages', userId.toString());
+    const userDir = path.join(__dirname, "../uploadsImages", userId.toString());
     if (fs.existsSync(userDir)) {
       await fs.remove(userDir);
-      console.log(`User image folder for user ID ${userId} deleted successfully.`);
+      console.log(
+        `User image folder for user ID ${userId} deleted successfully.`
+      );
     } else {
       console.log(`No image folder found for user ID ${userId}.`);
     }

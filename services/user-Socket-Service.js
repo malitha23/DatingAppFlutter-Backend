@@ -1,6 +1,5 @@
 // socketService.js
-const util = require('util');
-
+const util = require("util");
 
 module.exports = function (io, db, users) {
   const query = util.promisify(db.query).bind(db);
@@ -150,29 +149,38 @@ module.exports = function (io, db, users) {
                 try {
                   const messagesSql = `
                     SELECT m.*
-                    FROM messages m
-                    INNER JOIN (
-                      SELECT room_name, MAX(created_at) AS max_created_at
-                      FROM messages
-                      WHERE sender_id = ? OR receiverId = ?
-                      GROUP BY room_name
-                    ) latest
-                    ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
-                    WHERE m.sender_id = ? OR m.receiverId = ?
-                    ORDER BY m.id DESC`;
-                
-                
-                    // Execute the query to get the latest messages
-                    db.query(messagesSql, [receiverId, receiverId, receiverId, receiverId], async (err, messagesResults) => {
+FROM messages m
+INNER JOIN (
+  SELECT room_name, MAX(id) AS max_id
+  FROM messages
+  WHERE sender_id = ? OR receiverId = ?
+  GROUP BY room_name
+) latest
+ON m.id = latest.max_id
+WHERE m.sender_id = ? OR m.receiverId = ?
+`;
+
+                  // Execute the query to get the latest messages
+                  db.query(
+                    messagesSql,
+                    [receiverId, receiverId, receiverId, receiverId],
+                    async (err, messagesResults) => {
                       if (err) {
                         return res.status(500).json({ error: err.message });
                       }
-                
+
                       // Collect user details promises
                       const userDetailsPromises = messagesResults
-                        .filter(message => message.receiverId != receiverId || message.sender_id != receiverId)
-                        .map(message => {
-                          const friendId = message.receiverId != receiverId ? message.receiverId : message.sender_id;
+                        .filter(
+                          (message) =>
+                            message.receiverId != receiverId ||
+                            message.sender_id != receiverId
+                        )
+                        .map((message) => {
+                          const friendId =
+                            message.receiverId != receiverId
+                              ? message.receiverId
+                              : message.sender_id;
                           const userSql = `
                             SELECT DISTINCT  
                               users.*, 
@@ -185,42 +193,50 @@ module.exports = function (io, db, users) {
                             WHERE users.id = ?
                           `;
                           return new Promise((resolve, reject) => {
-                            db.query(userSql, [friendId], (err, userResults) => {
-                              if (err) {
-                                return reject(err);
-                              }
-                              resolve({
-                                friend: userResults[0],
-                                lastMessage: {
-                                  id: message.id,
-                                  messageId: message.messageId,
-                                  room_name: message.room_name,
-                                  sender_id: message.sender_id,
-                                  receiverId: message.receiverId,
-                                  message: message.message,
-                                  status: message.status,
-                                  created_at: message.created_at
+                            db.query(
+                              userSql,
+                              [friendId],
+                              (err, userResults) => {
+                                if (err) {
+                                  return reject(err);
                                 }
-                              }); // Assuming one result per user
-                            });
+                                resolve({
+                                  friend: userResults[0],
+                                  lastMessage: {
+                                    id: message.id,
+                                    messageId: message.messageId,
+                                    room_name: message.room_name,
+                                    sender_id: message.sender_id,
+                                    receiverId: message.receiverId,
+                                    message: message.message,
+                                    status: message.status,
+                                    created_at: message.created_at,
+                                  },
+                                }); // Assuming one result per user
+                              }
+                            );
                           });
                         });
-                
+
                       try {
-                        const lastMessagesResults = await Promise.all(userDetailsPromises);
+                        const lastMessagesResults = await Promise.all(
+                          userDetailsPromises
+                        );
                         io.to(users[receiverId]).emit("getlastmessagesReturn", {
                           lastMessagesResults,
                         });
                       } catch (userDetailsError) {
-                        console.error('Error fetching user details:', userDetailsError);
-                       // return res.status(500).json({ error: 'Internal server error' });
+                        console.error(
+                          "Error fetching user details:",
+                          userDetailsError
+                        );
+                        // return res.status(500).json({ error: 'Internal server error' });
                       }
-                    });
-                
-                 
-                      } catch (error) {
-                        handleError(error);
-                      }
+                    }
+                  );
+                } catch (error) {
+                  handleError(error);
+                }
               }
             }
           );
@@ -247,29 +263,38 @@ module.exports = function (io, db, users) {
           try {
             const messagesSql = `
               SELECT m.*
-              FROM messages m
-              INNER JOIN (
-                SELECT room_name, MAX(created_at) AS max_created_at
-                FROM messages
-                WHERE sender_id = ? OR receiverId = ?
-                GROUP BY room_name
-              ) latest
-              ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
-              WHERE m.sender_id = ? OR m.receiverId = ?
-              ORDER BY m.id DESC`;
-          
-          
-              // Execute the query to get the latest messages
-              db.query(messagesSql, [friendId, friendId, friendId, friendId], async (err, messagesResults) => {
+FROM messages m
+INNER JOIN (
+  SELECT room_name, MAX(id) AS max_id
+  FROM messages
+  WHERE sender_id = ? OR receiverId = ?
+  GROUP BY room_name
+) latest
+ON m.id = latest.max_id
+WHERE m.sender_id = ? OR m.receiverId = ?
+`;
+
+            // Execute the query to get the latest messages
+            db.query(
+              messagesSql,
+              [friendId, friendId, friendId, friendId],
+              async (err, messagesResults) => {
                 if (err) {
                   return res.status(500).json({ error: err.message });
                 }
-          
+
                 // Collect user details promises
                 const userDetailsPromises = messagesResults
-                  .filter(message => message.receiverId != friendId || message.sender_id != friendId)
-                  .map(message => {
-                    const friendId = message.receiverId != friendId ? message.receiverId : message.sender_id;
+                  .filter(
+                    (message) =>
+                      message.receiverId != friendId ||
+                      message.sender_id != friendId
+                  )
+                  .map((message) => {
+                    const friendId =
+                      message.receiverId != friendId
+                        ? message.receiverId
+                        : message.sender_id;
                     const userSql = `
                       SELECT DISTINCT  
                         users.*, 
@@ -296,28 +321,32 @@ module.exports = function (io, db, users) {
                             receiverId: message.receiverId,
                             message: message.message,
                             status: message.status,
-                            created_at: message.created_at
-                          }
+                            created_at: message.created_at,
+                          },
                         }); // Assuming one result per user
                       });
                     });
                   });
-          
+
                 try {
-                  const lastMessagesResults = await Promise.all(userDetailsPromises);
+                  const lastMessagesResults = await Promise.all(
+                    userDetailsPromises
+                  );
                   io.to(users[friendId]).emit("getlastmessagesReturn", {
                     lastMessagesResults,
                   });
                 } catch (userDetailsError) {
-                  console.error('Error fetching user details:', userDetailsError);
-                 // return res.status(500).json({ error: 'Internal server error' });
+                  console.error(
+                    "Error fetching user details:",
+                    userDetailsError
+                  );
+                  // return res.status(500).json({ error: 'Internal server error' });
                 }
-              });
-          
-           
-                } catch (error) {
-                  handleError(error);
-                }
+              }
+            );
+          } catch (error) {
+            handleError(error);
+          }
         }
       });
     });
@@ -399,94 +428,101 @@ module.exports = function (io, db, users) {
     });
 
     socket.on("getlastmessages", ({ userId }) => {
+      //       // Define the SQL query to retrieve friend IDs for the given user ID
+      //       const friendsSql = `
+      //       SELECT DISTINCT
+      // users.*, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic
+      // FROM users
+      // JOIN friendships ON users.id = friendships.friend_id OR users.id = friendships.user_id
+      // JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId
+      // JOIN register_steps_user_data ON users.id = register_steps_user_data.userId
+      // WHERE (friendships.user_id = ? OR friendships.friend_id = ?) AND users.id != ?
+      //       `;
 
-  //       // Define the SQL query to retrieve friend IDs for the given user ID
-  //       const friendsSql = `
-  //       SELECT DISTINCT  
-  // users.*, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic
-  // FROM users 
-  // JOIN friendships ON users.id = friendships.friend_id OR users.id = friendships.user_id 
-  // JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-  // JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
-  // WHERE (friendships.user_id = ? OR friendships.friend_id = ?) AND users.id != ?
-  //       `;
+      //       // Execute the SQL query to get friend IDs
+      //       db.query(friendsSql, [id, id, id], async (err, friendsResults) => {
+      //         if (err) {
+      //           console.error(err);
+      //           return res.status(500).json({ error: "Internal server error" });
+      //         }
 
-  //       // Execute the SQL query to get friend IDs
-  //       db.query(friendsSql, [id, id, id], async (err, friendsResults) => {
-  //         if (err) {
-  //           console.error(err);
-  //           return res.status(500).json({ error: "Internal server error" });
-  //         }
+      //         // Array to store promises for fetching last messages
+      //         const lastMessagesPromises = [];
 
-  //         // Array to store promises for fetching last messages
-  //         const lastMessagesPromises = [];
+      //         // Loop through each friend
+      //         for (const friend of friendsResults) {
+      //           // Define the SQL query to retrieve the last message for the current friend
+      //           const lastMessageSql = `
+      //             SELECT *
+      //             FROM messages
+      //             WHERE (sender_id = ? AND receiverId = ?) OR (sender_id = ? AND receiverId = ?)
+      //             ORDER BY created_at DESC
+      //             LIMIT 1
+      //           `;
 
-  //         // Loop through each friend
-  //         for (const friend of friendsResults) {
-  //           // Define the SQL query to retrieve the last message for the current friend
-  //           const lastMessageSql = `
-  //             SELECT *
-  //             FROM messages
-  //             WHERE (sender_id = ? AND receiverId = ?) OR (sender_id = ? AND receiverId = ?)
-  //             ORDER BY created_at DESC
-  //             LIMIT 1
-  //           `;
+      //           // Execute the SQL query to get the last message for the current friend
+      //           const promise = new Promise((resolve, reject) => {
+      //             db.query(
+      //               lastMessageSql,
+      //               [id, friend.id, friend.id, id],
+      //               (err, messageResult) => {
+      //                 if (err) {
+      //                   console.error(err);
+      //                   reject(err);
+      //                 } else {
+      //                   resolve({ friend, lastMessage: messageResult[0] });
+      //                 }
+      //               }
+      //             );
+      //           });
 
-  //           // Execute the SQL query to get the last message for the current friend
-  //           const promise = new Promise((resolve, reject) => {
-  //             db.query(
-  //               lastMessageSql,
-  //               [id, friend.id, friend.id, id],
-  //               (err, messageResult) => {
-  //                 if (err) {
-  //                   console.error(err);
-  //                   reject(err);
-  //                 } else {
-  //                   resolve({ friend, lastMessage: messageResult[0] });
-  //                 }
-  //               }
-  //             );
-  //           });
+      //           // Push the promise into the array
+      //           lastMessagesPromises.push(promise);
+      //         }
 
-  //           // Push the promise into the array
-  //           lastMessagesPromises.push(promise);
-  //         }
+      //         // Wait for all promises to resolve
+      //         const lastMessagesResults = await Promise.all(lastMessagesPromises);
+      // io.to(users[userId]).emit("getlastmessagesReturn", {
+      //   lastMessagesResults,
+      // });
+      // io.to(users[userId]).emit("unseenMessagesCount", 0);
+      //       });
 
-  //         // Wait for all promises to resolve
-  //         const lastMessagesResults = await Promise.all(lastMessagesPromises);
-          // io.to(users[userId]).emit("getlastmessagesReturn", {
-          //   lastMessagesResults,
-          // });
-          // io.to(users[userId]).emit("unseenMessagesCount", 0);
-  //       });
-  
-  try {
-  const messagesSql = `
+      try {
+        const messagesSql = `
     SELECT m.*
-    FROM messages m
-    INNER JOIN (
-      SELECT room_name, MAX(created_at) AS max_created_at
-      FROM messages
-      WHERE sender_id = ? OR receiverId = ?
-      GROUP BY room_name
-    ) latest
-    ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
-    WHERE m.sender_id = ? OR m.receiverId = ?
-    ORDER BY m.id DESC`;
+FROM messages m
+INNER JOIN (
+  SELECT room_name, MAX(id) AS max_id
+  FROM messages
+  WHERE sender_id = ? OR receiverId = ?
+  GROUP BY room_name
+) latest
+ON m.id = latest.max_id
+WHERE m.sender_id = ? OR m.receiverId = ?
+`;
 
+        // Execute the query to get the latest messages
+        db.query(
+          messagesSql,
+          [userId, userId, userId, userId],
+          async (err, messagesResults) => {
+            if (err) {
+              return res.status(500).json({ error: err.message });
+            }
 
-    // Execute the query to get the latest messages
-    db.query(messagesSql, [userId, userId, userId, userId], async (err, messagesResults) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-
-      // Collect user details promises
-      const userDetailsPromises = messagesResults
-        .filter(message => message.receiverId != userId || message.sender_id != userId)
-        .map(message => {
-          const friendId = message.receiverId != userId ? message.receiverId : message.sender_id;
-          const userSql = `
+            // Collect user details promises
+            const userDetailsPromises = messagesResults
+              .filter(
+                (message) =>
+                  message.receiverId != userId || message.sender_id != userId
+              )
+              .map((message) => {
+                const friendId =
+                  message.receiverId != userId
+                    ? message.receiverId
+                    : message.sender_id;
+                const userSql = `
             SELECT DISTINCT  
               users.*, 
               register_user_portfolio_data.firstName, 
@@ -497,73 +533,67 @@ module.exports = function (io, db, users) {
             JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
             WHERE users.id = ?
           `;
-          return new Promise((resolve, reject) => {
-            db.query(userSql, [friendId], (err, userResults) => {
-              if (err) {
-                return reject(err);
-              }
-              resolve({
-                friend: userResults[0],
-                lastMessage: {
-                  id: message.id,
-                  messageId: message.messageId,
-                  room_name: message.room_name,
-                  sender_id: message.sender_id,
-                  receiverId: message.receiverId,
-                  message: message.message,
-                  status: message.status,
-                  created_at: message.created_at
-                }
-              }); // Assuming one result per user
-            });
-          });
-        });
+                return new Promise((resolve, reject) => {
+                  db.query(userSql, [friendId], (err, userResults) => {
+                    if (err) {
+                      return reject(err);
+                    }
+                    resolve({
+                      friend: userResults[0],
+                      lastMessage: {
+                        id: message.id,
+                        messageId: message.messageId,
+                        room_name: message.room_name,
+                        sender_id: message.sender_id,
+                        receiverId: message.receiverId,
+                        message: message.message,
+                        status: message.status,
+                        created_at: message.created_at,
+                      },
+                    }); // Assuming one result per user
+                  });
+                });
+              });
 
-      try {
-        const lastMessagesResults = await Promise.all(userDetailsPromises);
-        io.to(users[userId]).emit("getlastmessagesReturn", {
-          lastMessagesResults,
-        });
-        io.to(users[userId]).emit("unseenMessagesCount", 0);
-      } catch (userDetailsError) {
-        console.error('Error fetching user details:', userDetailsError);
-       // return res.status(500).json({ error: 'Internal server error' });
-      }
-    });
-
- 
+            try {
+              const lastMessagesResults = await Promise.all(
+                userDetailsPromises
+              );
+              io.to(users[userId]).emit("getlastmessagesReturn", {
+                lastMessagesResults,
+              });
+              io.to(users[userId]).emit("unseenMessagesCount", 0);
+            } catch (userDetailsError) {
+              console.error("Error fetching user details:", userDetailsError);
+              // return res.status(500).json({ error: 'Internal server error' });
+            }
+          }
+        );
       } catch (error) {
         handleError(error);
       }
     });
-    
 
-    socket.on('addFriendAutoForMessage', async ({ userId, friendId }) => {
-    
-      const friendsSql = "SELECT * FROM friendships WHERE user_id = ? AND friend_id = ?";
-      
+    socket.on("addFriendAutoForMessage", async ({ userId, friendId }) => {
+      const friendsSql =
+        "SELECT * FROM friendships WHERE user_id = ? AND friend_id = ?";
+
       db.query(friendsSql, [userId, friendId], async (err, friendsResults) => {
         if (err) {
           console.error("Database error:", err);
           socket.emit("error", { message: "Internal server error" });
           return;
         }
-  
+
         if (friendsResults.length > 0) {
           console.log("Friendship record already exists. No action taken.");
           return;
         }
-  
-        const query = 
+
+        const query =
           "INSERT INTO friendships (user_id, friend_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)";
-        const params = [
-          userId,
-          friendId,
-          "pending",
-          new Date(),
-          new Date()
-        ];
-  
+        const params = [userId, friendId, "pending", new Date(), new Date()];
+
         db.query(query, params, (err, result) => {
           if (err) {
             console.error("Database error:", err);
@@ -650,14 +680,14 @@ module.exports = function (io, db, users) {
                           userId,
                           friendId,
                           status: "Reject",
-                          unfriend: unfriend ?? ''
+                          unfriend: unfriend ?? "",
                         });
                         io.to(users[friendId]).emit("friendsRequestResponse", {
                           id: 0,
                           userId,
                           friendId,
                           status: "Reject",
-                          unfriend: unfriend ?? ''
+                          unfriend: unfriend ?? "",
                         });
 
                         console.log(
@@ -707,11 +737,17 @@ module.exports = function (io, db, users) {
                             userId,
                             friendId,
                             status: "Accept",
-                            unfriend: unfriend ?? ''
+                            unfriend: unfriend ?? "",
                           });
                           io.to(users[friendId]).emit(
                             "friendsRequestResponse",
-                            { id: 0, userId, friendId, status: "Accept", unfriend: unfriend ?? '' }
+                            {
+                              id: 0,
+                              userId,
+                              friendId,
+                              status: "Accept",
+                              unfriend: unfriend ?? "",
+                            }
                           );
                           console.log(
                             `Friendship records updated successfully for user ${userId} and friend ${friendId}`
@@ -833,7 +869,7 @@ r.userId AS friendrequestAddedfId,
 
     //     // Check if the combination of user_id and friend_id exists
     //     const checkQueryString = `
-    //             SELECT * FROM user_harting 
+    //             SELECT * FROM user_harting
     //             WHERE user_id = ? AND friend_id = ?
     //         `;
 
@@ -849,14 +885,14 @@ r.userId AS friendrequestAddedfId,
     //       if (result.length <= 0) {
     //         // If the count is 0, perform an INSERT
     //         const insertQueryString = `
-    //                 INSERT INTO user_harting (user_id, friend_id, is_harting) 
+    //                 INSERT INTO user_harting (user_id, friend_id, is_harting)
     //                 VALUES (?, ?, ?)
     //             `;
     //         await db.query(insertQueryString, [userId, friendId, isHarting]);
     //       } else {
     //         // If the count is 1, perform an UPDATE
     //         const updateQueryString = `
-    //                 UPDATE user_harting 
+    //                 UPDATE user_harting
     //                 SET is_harting = ?
     //                 WHERE user_id = ? AND friend_id = ?
     //             `;
@@ -867,11 +903,11 @@ r.userId AS friendrequestAddedfId,
     //     const getLikedUserData = `SELECT DISTINCT
     //    r.firstName AS hartAddedfname, r.lastName AS hartAddedLname,
     //     users.nic, users.online, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic, register_steps_user_data.age, register_steps_user_data.gender,  hart.id AS hartingId, hart.user_id AS hartAddedId, hart.friend_id, hart.is_harting, hart.created_at
-    //      FROM users 
+    //      FROM users
     //      JOIN user_harting hart ON users.id = hart.friend_id
-    //      JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-    //      JOIN register_user_portfolio_data r ON hart.user_id = r.userId 
-    //      JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+    //      JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId
+    //      JOIN register_user_portfolio_data r ON hart.user_id = r.userId
+    //      JOIN register_steps_user_data ON users.id = register_steps_user_data.userId
     //      WHERE users.id = ?`;
 
     //     db.query(getLikedUserData, [friendId], async (err, result) => {
@@ -951,7 +987,7 @@ r.userId AS friendrequestAddedfId,
     //     // socket.emit('hartingAdded', { success: false, error: error.message });
     //   }
     // });
-   
+
     socket.on("addHarting", async (data) => {
       try {
         // Extract data from the incoming socket event
@@ -1010,65 +1046,68 @@ JOIN register_steps_user_data ON users.id = register_steps_user_data.userId
 WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 `;
 
-        db.query(getLikedUserData, [friendId, userId, friendId], async (err, result) => {
-          if (err) {
-            console.error("Database error:", err);
-            return;
-          }
-  
-          // Iterate over the result array
-          for (let i = 0; i < result.length; i++) {
-            const row = result[i];
-
-            // Access specific column data from the row
-            const nic = row.nic;
-            const online = row.online;
-            const firstName = row.firstName;
-            const hartAddedfname = row.hartAddedfname;
-            const lastName = row.lastName;
-            const profilePic = row.profilePic;
-            const age = row.age;
-            const gender = row.gender;
-            const hartingId = row.hartingId;
-            const friendId = row.friend_id;
-            // const isHarting = row.is_harting;
-            const createdAt = row.created_at;
-
-
-            const socketId = users[userId];
-            if (socketId) {
-              io.to(socketId).emit("hartingadded", {
-                nic,
-                online,
-                firstName,
-                lastName,
-                profilePic,
-                age,
-                gender,
-                hartingId,
-                friendId,
-                isHarting,
-                createdAt,
-              });
-              console.log(`Emitted to User socket ID: ${socketId}`);
-            } else {
-              console.error(`No socket found for userId: ${userId}`);
+        db.query(
+          getLikedUserData,
+          [friendId, userId, friendId],
+          async (err, result) => {
+            if (err) {
+              console.error("Database error:", err);
+              return;
             }
 
-            // const friendSocketId = users[friendId];
-            // if (friendSocketId) {
-            //   io.to(friendSocketId).emit("hartingadded", {
-            //     userId,
-            //     friendId,
-            //     isHarting,
-            //     hartAddedfname,
-            //   });
-            //   console.log(`Emitted to friend socket ID: ${friendSocketId}`);
-            // } else {
-            //   console.error(`No socket found for friendId: ${friendId}`);
-            // }
+            // Iterate over the result array
+            for (let i = 0; i < result.length; i++) {
+              const row = result[i];
+
+              // Access specific column data from the row
+              const nic = row.nic;
+              const online = row.online;
+              const firstName = row.firstName;
+              const hartAddedfname = row.hartAddedfname;
+              const lastName = row.lastName;
+              const profilePic = row.profilePic;
+              const age = row.age;
+              const gender = row.gender;
+              const hartingId = row.hartingId;
+              const friendId = row.friend_id;
+              // const isHarting = row.is_harting;
+              const createdAt = row.created_at;
+
+              const socketId = users[userId];
+              if (socketId) {
+                io.to(socketId).emit("hartingadded", {
+                  nic,
+                  online,
+                  firstName,
+                  lastName,
+                  profilePic,
+                  age,
+                  gender,
+                  hartingId,
+                  friendId,
+                  isHarting,
+                  createdAt,
+                });
+                console.log(`Emitted to User socket ID: ${socketId}`);
+              } else {
+                console.error(`No socket found for userId: ${userId}`);
+              }
+
+              // const friendSocketId = users[friendId];
+              // if (friendSocketId) {
+              //   io.to(friendSocketId).emit("hartingadded", {
+              //     userId,
+              //     friendId,
+              //     isHarting,
+              //     hartAddedfname,
+              //   });
+              //   console.log(`Emitted to friend socket ID: ${friendSocketId}`);
+              // } else {
+              //   console.error(`No socket found for friendId: ${friendId}`);
+              // }
+            }
           }
-        });
+        );
       } catch (error) {
         // Handle errors by logging them
         console.error("Error handling harting:", error);
@@ -1076,9 +1115,6 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
         // socket.emit('hartingAdded', { success: false, error: error.message });
       }
     });
-
-
-
 
     // Listen for the 'friendsRequestAcceptOrReject' event
     socket.on("friendsRequestAcceptOrReject", (data) => {
@@ -1155,8 +1191,20 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
                 console.log(
                   `Friend request with ID ${id} rejected and deleted successfully`
                 );
-                io.to(users[userId]).emit("friendsRequestResponse", { id, userId, friendId, status, 'unfriend':'unfriend' });
-                io.to(users[friendId]).emit("friendsRequestResponse", { id, userId, friendId, status, 'unfriend':'unfriend' });
+                io.to(users[userId]).emit("friendsRequestResponse", {
+                  id,
+                  userId,
+                  friendId,
+                  status,
+                  unfriend: "unfriend",
+                });
+                io.to(users[friendId]).emit("friendsRequestResponse", {
+                  id,
+                  userId,
+                  friendId,
+                  status,
+                  unfriend: "unfriend",
+                });
               }
             }
           );
@@ -1284,12 +1332,6 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
     console.error("An error occurred:", error);
   }
 };
-
-
-
-
-
-
 
 // // socketService.js
 
@@ -1449,28 +1491,27 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //                     ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
 //                     WHERE m.sender_id = ? OR m.receiverId = ?
 //                   `;
-                
-                
+
 //                     // Execute the query to get the latest messages
 //                     db.query(messagesSql, [receiverId, receiverId, receiverId, receiverId], async (err, messagesResults) => {
 //                       if (err) {
 //                         return res.status(500).json({ error: err.message });
 //                       }
-                
+
 //                       // Collect user details promises
 //                       const userDetailsPromises = messagesResults
 //                         .filter(message => message.receiverId != receiverId || message.sender_id != receiverId)
 //                         .map(message => {
 //                           const friendId = message.receiverId != receiverId ? message.receiverId : message.sender_id;
 //                           const userSql = `
-//                             SELECT DISTINCT  
-//                               users.*, 
-//                               register_user_portfolio_data.firstName, 
+//                             SELECT DISTINCT
+//                               users.*,
+//                               register_user_portfolio_data.firstName,
 //                               register_user_portfolio_data.lastName,
 //                               register_steps_user_data.profilePic
-//                             FROM users 
-//                             JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-//                             JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+//                             FROM users
+//                             JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId
+//                             JOIN register_steps_user_data ON users.id = register_steps_user_data.userId
 //                             WHERE users.id = ?
 //                           `;
 //                           return new Promise((resolve, reject) => {
@@ -1494,7 +1535,7 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //                             });
 //                           });
 //                         });
-                
+
 //                       try {
 //                         const lastMessagesResults = await Promise.all(userDetailsPromises);
 //                         io.to(users[receiverId]).emit("getlastmessagesReturn", {
@@ -1505,8 +1546,7 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //                        // return res.status(500).json({ error: 'Internal server error' });
 //                       }
 //                     });
-                
-                 
+
 //                       } catch (error) {
 //                         handleError(error);
 //                       }
@@ -1546,28 +1586,27 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //               ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
 //               WHERE m.sender_id = ? OR m.receiverId = ?
 //             `;
-          
-          
+
 //               // Execute the query to get the latest messages
 //               db.query(messagesSql, [friendId, friendId, friendId, friendId], async (err, messagesResults) => {
 //                 if (err) {
 //                   return res.status(500).json({ error: err.message });
 //                 }
-          
+
 //                 // Collect user details promises
 //                 const userDetailsPromises = messagesResults
 //                   .filter(message => message.receiverId != friendId || message.sender_id != friendId)
 //                   .map(message => {
 //                     const friendId = message.receiverId != friendId ? message.receiverId : message.sender_id;
 //                     const userSql = `
-//                       SELECT DISTINCT  
-//                         users.*, 
-//                         register_user_portfolio_data.firstName, 
+//                       SELECT DISTINCT
+//                         users.*,
+//                         register_user_portfolio_data.firstName,
 //                         register_user_portfolio_data.lastName,
 //                         register_steps_user_data.profilePic
-//                       FROM users 
-//                       JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-//                       JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+//                       FROM users
+//                       JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId
+//                       JOIN register_steps_user_data ON users.id = register_steps_user_data.userId
 //                       WHERE users.id = ?
 //                     `;
 //                     return new Promise((resolve, reject) => {
@@ -1591,7 +1630,7 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //                       });
 //                     });
 //                   });
-          
+
 //                 try {
 //                   const lastMessagesResults = await Promise.all(userDetailsPromises);
 //                   io.to(users[friendId]).emit("getlastmessagesReturn", {
@@ -1602,8 +1641,7 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //                  // return res.status(500).json({ error: 'Internal server error' });
 //                 }
 //               });
-          
-           
+
 //                 } catch (error) {
 //                   handleError(error);
 //                 }
@@ -1691,12 +1729,12 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 
 //   //       // Define the SQL query to retrieve friend IDs for the given user ID
 //   //       const friendsSql = `
-//   //       SELECT DISTINCT  
+//   //       SELECT DISTINCT
 //   // users.*, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic
-//   // FROM users 
-//   // JOIN friendships ON users.id = friendships.friend_id OR users.id = friendships.user_id 
-//   // JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-//   // JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+//   // FROM users
+//   // JOIN friendships ON users.id = friendships.friend_id OR users.id = friendships.user_id
+//   // JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId
+//   // JOIN register_steps_user_data ON users.id = register_steps_user_data.userId
 //   // WHERE (friendships.user_id = ? OR friendships.friend_id = ?) AND users.id != ?
 //   //       `;
 
@@ -1748,7 +1786,7 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //           // });
 //           // io.to(users[userId]).emit("unseenMessagesCount", 0);
 //   //       });
-  
+
 //   try {
 //   const messagesSql = `
 //     SELECT m.*
@@ -1763,7 +1801,6 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //     WHERE m.sender_id = ? OR m.receiverId = ?
 //   `;
 
-
 //     // Execute the query to get the latest messages
 //     db.query(messagesSql, [userId, userId, userId, userId], async (err, messagesResults) => {
 //       if (err) {
@@ -1776,14 +1813,14 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //         .map(message => {
 //           const friendId = message.receiverId != userId ? message.receiverId : message.sender_id;
 //           const userSql = `
-//             SELECT DISTINCT  
-//               users.*, 
-//               register_user_portfolio_data.firstName, 
+//             SELECT DISTINCT
+//               users.*,
+//               register_user_portfolio_data.firstName,
 //               register_user_portfolio_data.lastName,
 //               register_steps_user_data.profilePic
-//             FROM users 
-//             JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-//             JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+//             FROM users
+//             JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId
+//             JOIN register_steps_user_data ON users.id = register_steps_user_data.userId
 //             WHERE users.id = ?
 //           `;
 //           return new Promise((resolve, reject) => {
@@ -1820,30 +1857,28 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //       }
 //     });
 
- 
 //       } catch (error) {
 //         handleError(error);
 //       }
 //     });
-    
 
 //     socket.on('addFriendAutoForMessage', async ({ userId, friendId }) => {
-    
+
 //       const friendsSql = "SELECT * FROM friendships WHERE user_id = ? AND friend_id = ?";
-      
+
 //       db.query(friendsSql, [userId, friendId], async (err, friendsResults) => {
 //         if (err) {
 //           console.error("Database error:", err);
 //           socket.emit("error", { message: "Internal server error" });
 //           return;
 //         }
-  
+
 //         if (friendsResults.length > 0) {
 //           console.log("Friendship record already exists. No action taken.");
 //           return;
 //         }
-  
-//         const query = 
+
+//         const query =
 //           "INSERT INTO friendships (user_id, friend_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)";
 //         const params = [
 //           userId,
@@ -1852,7 +1887,7 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //           new Date(),
 //           new Date()
 //         ];
-  
+
 //         db.query(query, params, (err, result) => {
 //           if (err) {
 //             console.error("Database error:", err);
@@ -2032,7 +2067,7 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 
 //                 // Fetch additional user data
 //                 const userSql = `
-//                     SELECT 
+//                     SELECT
 // r.firstName AS friendrequestAddedfname,
 // r.userId AS friendrequestAddedfId,
 //                       u.online,
@@ -2040,17 +2075,17 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //                       rupd.firstName,
 //                       rupd.lastName,
 //                       friends.*
-//                     FROM 
+//                     FROM
 //                       users u
-//                     LEFT JOIN 
+//                     LEFT JOIN
 //                       register_steps_user_data rsud ON u.id = rsud.userId
-//                     LEFT JOIN 
+//                     LEFT JOIN
 //                       friendships friends ON u.id = friends.user_id
-//                     LEFT JOIN 
+//                     LEFT JOIN
 //                       register_user_portfolio_data rupd ON u.id = rupd.userId
-//                       LEFT JOIN 
+//                       LEFT JOIN
 //                       register_user_portfolio_data r ON friends.user_id = r.userId
-//                     WHERE 
+//                     WHERE
 //                       u.id= ?
 //                   `;
 //                 db.query(userSql, [userId], (err, userResults) => {
@@ -2122,7 +2157,7 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 
 //         // Check if the combination of user_id and friend_id exists
 //         const checkQueryString = `
-//                 SELECT * FROM user_harting 
+//                 SELECT * FROM user_harting
 //                 WHERE user_id = ? AND friend_id = ?
 //             `;
 
@@ -2138,14 +2173,14 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //           if (result.length <= 0) {
 //             // If the count is 0, perform an INSERT
 //             const insertQueryString = `
-//                     INSERT INTO user_harting (user_id, friend_id, is_harting) 
+//                     INSERT INTO user_harting (user_id, friend_id, is_harting)
 //                     VALUES (?, ?, ?)
 //                 `;
 //             await db.query(insertQueryString, [userId, friendId, isHarting]);
 //           } else {
 //             // If the count is 1, perform an UPDATE
 //             const updateQueryString = `
-//                     UPDATE user_harting 
+//                     UPDATE user_harting
 //                     SET is_harting = ?
 //                     WHERE user_id = ? AND friend_id = ?
 //                 `;
@@ -2156,11 +2191,11 @@ WHERE users.id = ? AND hart.user_id = ? AND hart.friend_id = ?;
 //         const getLikedUserData = `SELECT DISTINCT
 //        r.firstName AS hartAddedfname, r.lastName AS hartAddedLname,
 //         users.nic, users.online, register_user_portfolio_data.firstName, register_user_portfolio_data.lastName, register_steps_user_data.profilePic, register_steps_user_data.age, register_steps_user_data.gender,  hart.id AS hartingId, hart.user_id AS hartAddedId, hart.friend_id, hart.is_harting, hart.created_at
-//          FROM users 
+//          FROM users
 //          JOIN user_harting hart ON users.id = hart.friend_id
-//          JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId 
-//          JOIN register_user_portfolio_data r ON hart.user_id = r.userId 
-//          JOIN register_steps_user_data ON users.id = register_steps_user_data.userId 
+//          JOIN register_user_portfolio_data ON users.id = register_user_portfolio_data.userId
+//          JOIN register_user_portfolio_data r ON hart.user_id = r.userId
+//          JOIN register_steps_user_data ON users.id = register_steps_user_data.userId
 //          WHERE users.id = ?`;
 
 //         db.query(getLikedUserData, [friendId], async (err, result) => {
