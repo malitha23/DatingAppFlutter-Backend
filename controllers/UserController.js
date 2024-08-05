@@ -305,7 +305,7 @@ const getMessagessList = async (req, res) => {
     ) latest
     ON m.room_name = latest.room_name AND m.created_at = latest.max_created_at
     WHERE m.sender_id = ? OR m.receiverId = ?
-  `;
+    ORDER BY m.id DESC`;
 
   try {
     // Execute the query to get the latest messages
