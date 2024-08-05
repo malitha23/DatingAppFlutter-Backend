@@ -1,6 +1,6 @@
 // socketService.js
 const util = require("util");
-const { sendHartingNotification } = require('./pusherService.js');
+const { sendHartingNotification, subscribeToChannel, subscribeToChannelremove } = require('./pusherService.js');
 module.exports = function (io, db, users) {
   const query = util.promisify(db.query).bind(db);
 
@@ -386,7 +386,7 @@ WHERE m.sender_id = ? OR m.receiverId = ?
         users[userId] = socket.id;
         console.log(`User ${userId} is ${isOnline ? "online" : "offline"}`);
         io.emit("onlineStatus", { userId, isOnline });
-
+        subscribeToChannel(userId);
         // Update user's online status in the database
         updateUserOnlineStatus(userId, isOnline);
         updateUserDeliveredStatusFormessages(userId);
@@ -955,7 +955,7 @@ r.userId AS friendrequestAddedfId,
               nic, online, firstName, lastName, profilePic,
               age, gender, hartingId, friendId, isHarting, createdAt,
             });
-            sendHartingNotification(userId, { row });
+            sendHartingNotification(friendId, { row });
             console.log(`Emitted to User socket ID: ${socketId}`);
           } else {
             console.error(`No socket found for userId: ${userId}`);
@@ -1071,6 +1071,7 @@ r.userId AS friendrequestAddedfId,
       // Optionally, you can clean up the user mapping on disconnect
       for (const userId in users) {
         if (users[userId] === socket.id) {
+          subscribeToChannelremove(userId);
           delete users[userId];
           break;
         }
