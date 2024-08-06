@@ -3,7 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const fs = require("fs-extra");
 const path = require("path");
-
+const { subscribeToChannelremove } = require('../services/pusherService');
 const db = database.connection;
 
 function verifyToken(token) {
@@ -208,6 +208,25 @@ const login = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Error logging in" });
+  }
+};
+
+const logout = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    // Here, we'll just log the user out for demonstration
+    console.log(`User ${userId} logged out successfully`);
+    subscribeToChannelremove(userId);
+    // Respond with a success message
+    res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    console.error("Error during logout:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -971,7 +990,9 @@ const getAllUsersToHomepage = async (req, res) => {
     LEFT JOIN 
     register_steps_user_data rsud ON u.id = rsud.userId
     LEFT JOIN 
-    packagesbuydata pkbd ON u.id = pkbd.userId
+    (SELECT * FROM packagesbuydata pbd
+     WHERE pbd.id IN (SELECT MAX(id) FROM packagesbuydata GROUP BY userId)) pkbd
+    ON u.id = pkbd.userId
     LEFT JOIN 
     friendships f ON u.id = f.friend_id AND f.user_id = ?
     LEFT JOIN 
@@ -1037,7 +1058,6 @@ const getAllUsersToHomepage = async (req, res) => {
         console.error("Error retrieving users: ", err);
         return res.status(500).json({ message: "Internal server error" });
       }
-
       res.status(200).json(results);
     });
   } catch (error) {
@@ -1368,4 +1388,5 @@ module.exports = {
   updateProfilePic,
   getMessagessList,
   deleteUserData,
+  logout
 };
