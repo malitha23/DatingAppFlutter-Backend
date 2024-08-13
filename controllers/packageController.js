@@ -51,19 +51,25 @@ const getPackagesPaymentData = async (req, res) => {
           return res.status(500).json({ message: "Database query error", error: err });
         }
 
-          // Format timestamps
-          const formattedResults = results.map((item) => {
-            return {
-              ...item,
-              packageStartDate: moment(item.packageStartDate).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
-              packageStartEnd: moment(item.packageStartEnd).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
-              paymentDate: moment(item.payment_date).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
-              createdAt: moment(item.created_at).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
-              updatedAt: moment(item.updated_at).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
-            };
-          });
-  
-          res.json(formattedResults);
+        if (results.length > 0) {
+            // Format timestamps
+            const formattedResults = results.map((item) => {
+              return {
+                ...item,
+                packageStartDate: moment(item.packageStartDate).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
+                packageStartEnd: moment(item.packageStartEnd).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
+                paymentDate: moment(item.payment_date).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
+                createdAt: moment(item.created_at).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
+                updatedAt: moment(item.updated_at).tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss"),
+              };
+            });
+    
+            res.json(formattedResults);
+        } else {
+          res.status(404).json({ message: "No package buy data found" });
+        }
+
+        
       }
     );
   } catch (error) {
