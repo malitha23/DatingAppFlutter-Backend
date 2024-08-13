@@ -144,7 +144,11 @@ const getUserData = (nic) => {
     pkbd.plan_name,
     pkbd.payment_date,
     pkbd.payment_status,
-    pkbd.created_at
+    pkbd.plan_name,
+    pkbd.payment_method,
+    pkbd.approved,
+    pkbd.receiptImage,
+    pkbd.withDiscount
 FROM 
     users u
 LEFT JOIN 
@@ -157,11 +161,97 @@ LEFT JOIN
         SELECT MAX(payment_date)
         FROM packagesbuydata
         WHERE userId = u.id
+    ) 
+    AND pkbd.id = (
+        SELECT MAX(id)
+        FROM packagesbuydata
+        WHERE userId = u.id
     )
 WHERE 
     u.nic = ?`;
     // Query the database to retrieve user data based on the NIC number
     db.query(sql, [nic], (err, results) => {
+      if (err) {
+        console.error(err);
+        reject(err); // Reject with the error object
+      } else {
+        // If user data is found, resolve the promise with the user data
+        if (results.length > 0) {
+          resolve(results[0]);
+        } else {
+          // If user data is not found, reject with a specific message
+          reject("User not found");
+        }
+      }
+    });
+  });
+};
+
+const getUserDataForProfileView = (userId, friendId) => {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT 
+    COALESCE(f.status, 'not friends') AS isFriendValue,
+    COALESCE(f.status, 'not friends') AS isFriend,
+    hart.is_harting AS isHarting,
+    u.id AS user_id,
+    u.generatedKey,
+    u.nic,
+    u.online,
+    u.status,
+    u.created_at,
+    u.updated_at,
+    rsud.id AS rsud_id,
+    rsud.userId AS rsud_userId,
+    rsud.gender,
+    rsud.age,
+    rsud.birthday,
+    rsud.interests,
+    rsud.profilePic,
+    rsud.otherImages,
+    rsud.terms_agree,
+    rsud.nicFrontImage,
+    rsud.nicBackImage,
+    rupd.id AS rupd_id,
+    rupd.userId AS rupd_userId,
+    rupd.firstName,
+    rupd.lastName,
+    rupd.whatsAppNumber,
+    rupd.job,
+    rupd.location,
+    rupd.marriageStatus,
+    rupd.heightFt,
+    rupd.heightIn,
+    rupd.weight,
+    rupd.address,
+    rupd.personalityDescription,
+    rupd.alcoholConsumption,
+    rupd.lookingFor,
+    pkbd.price as packagePrice,
+    pkbd.duration as packageDurationMonth,
+    pkbd.packageStartDate,
+    pkbd.packageStartEnd as packageEndDate,
+    pkbd.plan_name,
+    pkbd.payment_date,
+    pkbd.payment_date,
+    pkbd.payment_status
+    FROM 
+    users u
+    LEFT JOIN 
+    register_steps_user_data rsud ON u.id = rsud.userId
+    LEFT JOIN 
+    (SELECT * FROM packagesbuydata pbd
+     WHERE pbd.id IN (SELECT MAX(id) FROM packagesbuydata GROUP BY userId)) pkbd
+    ON u.id = pkbd.userId
+    LEFT JOIN 
+    friendships f ON u.id = f.friend_id AND f.user_id = ?
+    LEFT JOIN 
+    user_harting hart ON u.id = hart.friend_id AND hart.user_id = ?
+    LEFT JOIN 
+    register_user_portfolio_data rupd ON u.id = rupd.userId
+    WHERE 
+    u.id = ?`;
+    // Query the database to retrieve user data based on the NIC number
+    db.query(sql, [userId, userId, friendId], (err, results) => {
       if (err) {
         console.error(err);
         reject(err); // Reject with the error object
@@ -486,171 +576,6 @@ const register_steps_user_data = async (userId, data) => {
   });
 };
 
-// const register_steps_user_data = async (req, res) => {
-//   console.log(req.body);
-//   try {
-//     const token = req.headers.authorization;
-//     const decoded = verifyToken(token);
-//     if (!decoded) {
-//       return res.status(401).json({ message: "Unauthorized" });
-//     }
-
-//     const userData = await getUserData(decoded.nic);
-//     if (!userData) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-//     const userId = userData["id"];
-
-//     // Extract remaining data from the request body
-//     const { gender, age, birthday, interests, terms_agree } = req.body;
-//     const profilePic = req.files.profilePic ? req.files.profilePic[0].path : null;
-//     const otherImages = req.files.otherImages ? req.files.otherImages.map(file => file.path) : [];
-
-//     const checkSql = "SELECT * FROM register_steps_user_data WHERE userId = ?";
-//     db.query(checkSql, [userId], (checkErr, checkResults) => {
-//       if (checkErr) {
-//         console.error(checkErr);
-//         return res.status(500).send("Error checking user data");
-//       }
-
-//       if (checkResults.length > 0) {
-//         const updateSql = `UPDATE register_steps_user_data SET
-//                              gender = ?, age = ?, birthday = ?, interests = ?,
-//                              profilePic = ?, otherImages = ?, terms_agree = ?
-//                            WHERE userId = ?`;
-
-//         const updateValues = [
-//           gender,
-//           age,
-//           birthday,
-//           JSON.stringify(interests),
-//           profilePic,
-//           JSON.stringify(otherImages),
-//           terms_agree,
-//           userId,
-//         ];
-
-//         db.query(updateSql, updateValues, (updateErr, updateResult) => {
-//           if (updateErr) {
-//             console.error(updateErr);
-//             return res.status(500).send("Error updating user data");
-//           }
-//           return res.status(200).json({ message: "User data updated successfully" });
-//         });
-//       } else {
-//         const insertSql = `INSERT INTO register_steps_user_data (userId, gender, age, birthday, interests, profilePic, otherImages, terms_agree)
-//                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-
-//         const insertValues = [
-//           userId,
-//           gender,
-//           age,
-//           birthday,
-//           JSON.stringify(interests),
-//           profilePic,
-//           JSON.stringify(otherImages),
-//           terms_agree,
-//         ];
-
-//         db.query(insertSql, insertValues, (insertErr, insertResult) => {
-//           if (insertErr) {
-//             console.error(insertErr);
-//             return res.status(500).send("Error inserting user data");
-//           }
-//           return res.status(200).json({ message: "User data inserted successfully" });
-//         });
-//       }
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: "An error occurred. Please try again." });
-//   }
-// };
-
-// const register_steps_user_data = async (req, res) => {
-//   // Extract token from the request headers
-//   const token = req.headers.authorization;
-
-//   // Verify the token
-//   const decoded = verifyToken(token);
-//   if (!decoded) {
-//     return res.status(401).json({ message: "Unauthorized" });
-//   }
-
-//   const userData = await getUserData(decoded.nic);
-//   if (!userData) {
-//     return res.status(404).json({ message: "User not found" });
-//   }
-//   const userId = userData["id"];
-
-//   // Extract the remaining data from the request body
-//   const { gender, age, birthday, interests, profilePic, otherImages } =
-//     req.body;
-//   // Check if the userId already exists in the table
-//   const checkSql = "SELECT * FROM register_steps_user_data WHERE userId = ?";
-//   db.query(checkSql, [userId], (checkErr, checkResults) => {
-//     if (checkErr) {
-//       console.error(checkErr);
-//       return res.status(500).send("Error checking user data");
-//     }
-
-//     // If userId exists, update the record
-//     if (checkResults.length > 0) {
-//       const updateSql = `UPDATE register_steps_user_data SET
-//                            gender = ?, age = ?, birthday = ?, interests = ?,
-//                            profilePic = ?, otherImages = ?, terms_agree = ?
-//                          WHERE userId = ?`;
-
-//       const updateValues = [
-//         gender,
-//         age,
-//         birthday,
-//         JSON.stringify(interests), // Convert interests to JSON string
-//         profilePic,
-//         JSON.stringify(otherImages), // Convert otherImages to JSON string
-//         0,
-//         userId,
-//       ];
-
-//       db.query(updateSql, updateValues, (updateErr, updateResult) => {
-//         if (updateErr) {
-//           console.error(updateErr);
-//           return res.status(500).send("Error updating user data");
-//         }
-//         // Send success response
-//         return res
-//           .status(200)
-//           .json({ message: "User data updated successfully" });
-//       });
-//     } else {
-//       // If userId does not exist, insert a new record
-//       const insertSql = `INSERT INTO register_steps_user_data (userId, gender, age, birthday, interests, profilePic, otherImages, terms_agree)
-//                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-
-//       const insertValues = [
-//         userId,
-//         gender,
-//         age,
-//         birthday,
-//         JSON.stringify(interests), // Convert interests to JSON string
-//         profilePic,
-//         JSON.stringify(otherImages), // Convert otherImages to JSON string
-//         0,
-//       ];
-
-//       db.query(insertSql, insertValues, (insertErr, insertResult) => {
-//         if (insertErr) {
-//           console.error(insertErr);
-//           return res.status(500).send("Error inserting user data");
-//         }
-//         // Send success response
-//         return res
-//           .status(200)
-//           .json({ message: "User data inserted successfully" });
-//       });
-//     }
-//   });
-// };
 
 const update_user_nic_images = async (userId, { frontImage, backImage }) => {
   const sql = `UPDATE register_steps_user_data SET nicFrontImage = ?, nicBackImage = ? WHERE userId = ?`;
@@ -1162,38 +1087,6 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// const updateProfilePic = async (req, res) => {
-//   const { userId } = req.params;
-//   const { profilePic } = req.body;
-
-//   if (!userId || !profilePic) {
-//     return res.status(400).json({ message: "Missing userId or profilePic" });
-//   }
-
-//   try {
-//     const sql =
-//       "UPDATE register_steps_user_data SET profilePic = ? WHERE userId = ?";
-//     const values = [profilePic, userId];
-
-//     db.query(sql, values, (err, results) => {
-//       if (err) {
-//         console.error("Error updating profile picture:", err);
-//         return res
-//           .status(500)
-//           .json({ message: "Error updating profile picture" });
-//       }
-
-//       if (results.affectedRows === 0) {
-//         return res.status(404).json({ message: "User not found" });
-//       }
-
-//       res.status(200).json({ message: "Profile picture updated successfully" });
-//     });
-//   } catch (error) {
-//     console.error("Unexpected error:", error);
-//     res.status(500).json({ message: "Unexpected error occurred" });
-//   }
-// };
 
 const updateProfilePic = async (userId, updateData) => {
   try {
@@ -1388,5 +1281,6 @@ module.exports = {
   updateProfilePic,
   getMessagessList,
   deleteUserData,
-  logout
+  logout,
+  getUserDataForProfileView
 };

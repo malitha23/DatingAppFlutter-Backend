@@ -4,7 +4,8 @@ var connection = mysql.createPool({
   host     : 'localhost',
   user     : 'root',
   password : '',
-  database : 'lovebordnewbackend'
+  database : 'lovebordnewbackend',
+  charset: 'utf8mb4'
 });
 
 module.exports = {connection};

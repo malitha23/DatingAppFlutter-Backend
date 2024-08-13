@@ -186,9 +186,9 @@ const insertFreePackageOneMonth = async (req, res) => {
 
   const insertQuery = `
     INSERT INTO packagesbuydata 
-      (userId, price, duration, packageStartDate, packageStartEnd, plan_name, payment_date, payment_status, created_at, updated_at) 
+      (userId, price, duration, packageStartDate, packageStartEnd, plan_name, payment_date, payment_status, payment_method, approved, receiptImage created_at, updated_at) 
     VALUES 
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const price = 0;
   const duration = 1;
@@ -211,6 +211,9 @@ const insertFreePackageOneMonth = async (req, res) => {
     plan_name,
     packageStartDate, // payment_date same as packageStartDate
     payment_status,
+    null, // payment_method set to NULL
+    1, // approved set to 1
+    null, // receiptImage set to NULL
     currentTimestamp,
     currentTimestamp,
   ];
@@ -343,8 +346,102 @@ const checkKeyExists = async (key) => {
   });
 };
 
+const updateheartsBankDepositImage = async (userId, updateData, bodydata) => {
+  console.log(userId);
+  console.log(updateData);
+  console.log(bodydata);
+
+  // Extract data from the parameters
+  const hearts = bodydata.hearts || 0;
+  const total_price = bodydata.total_price || '0.00';
+  const withrefaral_code = bodydata.withrefaralCode || '';
+  const bank_receipt_image = updateData.heartsBankDepositImage || '';
+
+  // Get current timestamp
+  const currentTimestamp = moment.tz("Asia/Colombo").format("YYYY-MM-DD HH:mm:ss");
+
+  // SQL Insert Query
+  const insertQuery = `
+    INSERT INTO heartsbuydata (
+      userId, hearts, total_price, withrefaral_code, bank_receipt_image, approved, payment_method, payment_date, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  // Data to insert
+  const values = [
+    userId,
+    hearts,
+    total_price,
+    withrefaral_code,
+    bank_receipt_image,
+    0, // approved (default to 0)
+    'Deposit', // payment_method set to 'Deposit'
+    currentTimestamp, // payment_date
+    currentTimestamp, // created_at
+    currentTimestamp  // updated_at
+  ];
+
+  try {
+    // Execute the query
+    // Execute the insert query
+    db.query(insertQuery, values, async (error, results, fields) => {
+      if (error) {
+        console.error("Error inserting package buy data:", error);
+        throw new Error("Internal server error");
+      }
+      if (results.affectedRows > 0) {
+        console.log("Package buy data inserted successfully");
+        return { success: true, message: "Package buy data inserted successfully" };
+      } else {
+        return { success: false, message: "Failed to insert package buy data" };
+      }
+    });
+
+  } catch (err) {
+    console.error('Error executing query: ' + err.stack);
+    return { success: false, message: "Failed to insert package buy data" };
+  }
+
+};
+
+const getheartsBankDeposit = async (req, res) => {
+  // Extract token from the request headers
+  const token = req.headers.authorization;
+
+  // Verify the token
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userData = await getUserData(decoded.nic);
+  if (!userData) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  const userId = userData["id"];
+
+  // Query to get hearts buy data
+  db.query(
+    "SELECT * FROM heartsbuydata WHERE userId = ? ORDER BY id DESC",
+    [userId],
+    (err, results) => {
+      if (err) {
+        console.error("Error fetching hearts buy data: ", err);
+        return res.status(500).json({ message: "Error fetching hearts buy data" });
+      }
+      if (results.length > 0) {
+        res.status(200).json(results);
+      } else {
+        res.status(404).json({ message: "No hearts buy data found" });
+      }
+    }
+  );
+};
+
 module.exports = {
   insertCoinBalance,
   getCoinBalance,
   insertFreePackageOneMonth,
+  getheartsBankDeposit,
+  updateheartsBankDepositImage
 };

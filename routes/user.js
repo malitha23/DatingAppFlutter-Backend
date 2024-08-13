@@ -223,6 +223,29 @@ router.get("/getAllUsersToHomepage", authController.getAllUsersToHomepage);
 router.get("/getUserFriendsPendinglistData", authController.getUserFriendsPendinglistData);
 router.get("/getUserFriendslistData", authController.getUserFriendslistData);
 router.get("/hartings/:userId", authController.getHartingList);
+// Define your route
+router.get('/userDataForProfileView/:friendId', async (req, res) => {
+  const token = req.headers.authorization;
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userData = await getUserData(decoded.nic);
+    if (!userData) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const userId = userData.id;
+  const friendId = req.params.friendId;
+
+  try {
+      const userData = await authController.getUserDataForProfileView(userId, friendId);
+
+      res.json(userData);
+  } catch (err) {
+      res.status(404).json({ error: err.toString() });
+  }
+});
 router.delete('/deleteuser', async (req, res) => {
     try {
       await authController.deleteUserData(req);
@@ -245,4 +268,25 @@ router.get('/view/:userId/:filename', (req, res) => {
   });
 });
 
+// Route to serve uploaded files
+router.get('/view/:userId/heartsBankDepositImage/:filename', (req, res) => {
+  const filePath = path.join(__dirname, '../uploadsImages', req.params.userId,'heartsBankDepositImage',req.params.filename);
+  res.sendFile(filePath, err => {
+    if (err) {
+      console.error('Error sending file:', err);
+      res.status(404).send('File not found');
+    }
+  });
+});
+
+// Route to serve uploaded files
+router.get('/view/:userId/BankDepositImage/:filename', (req, res) => {
+  const filePath = path.join(__dirname, '../uploadsImages', req.params.userId,'BankDepositImage',req.params.filename);
+  res.sendFile(filePath, err => {
+    if (err) {
+      console.error('Error sending file:', err);
+      res.status(404).send('File not found');
+    }
+  });
+});
 module.exports = router;
