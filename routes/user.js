@@ -280,8 +280,8 @@ router.get('/view/:userId/heartsBankDepositImage/:filename', (req, res) => {
 });
 
 // Route to serve uploaded files
-router.get('/view/:userId/BankDepositImage/:filename', (req, res) => {
-  const filePath = path.join(__dirname, '../uploadsImages', req.params.userId,'BankDepositImage',req.params.filename);
+router.get('/view/:userId/bankDepositImage/:filename', (req, res) => {
+  const filePath = path.join(__dirname, '../uploadsImages', req.params.userId,'bankDepositImage',req.params.filename);
   res.sendFile(filePath, err => {
     if (err) {
       console.error('Error sending file:', err);
