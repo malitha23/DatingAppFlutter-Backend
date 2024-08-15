@@ -292,7 +292,7 @@ const updateKey = async (userId, newKey, formattedPhoneNumber) => {
 
         // Check if the response status is OK
         if (!response.ok) {
-            const errorText = await response.text();
+            const errorText = await response.json();
             console.log(errorText);
             return;
         }
