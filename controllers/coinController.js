@@ -157,7 +157,7 @@ const insertFreePackageOneMonth = async (req, res) => {
   // Verify the token
   const decoded = verifyToken(token);
   if (!decoded) {
-    //   return res.status(401).json({ message: "Unauthorized" });
+       return res.status(401).json({ message: "Unauthorized" });
   }
 
   const generatedKey = await generateKey(decoded.nic);
@@ -184,11 +184,11 @@ const insertFreePackageOneMonth = async (req, res) => {
 
 
 
-  const insertQuery = `
+    const insertQuery = `
     INSERT INTO packagesbuydata 
-      (userId, price, duration, packageStartDate, packageStartEnd, plan_name, payment_date, payment_status, payment_method, approved, receiptImage created_at, updated_at) 
+      (userId, price, duration, packageStartDate, packageStartEnd, plan_name, payment_date, payment_status, payment_method, approved, receiptImage, withDiscount, withrefaralCode, created_at, updated_at) 
     VALUES 
-      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const price = 0;
   const duration = 1;
@@ -214,6 +214,8 @@ const insertFreePackageOneMonth = async (req, res) => {
     null, // payment_method set to NULL
     1, // approved set to 1
     null, // receiptImage set to NULL
+    0,
+    null,
     currentTimestamp,
     currentTimestamp,
   ];
