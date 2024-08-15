@@ -277,32 +277,32 @@ const updateKey = async (userId, newKey, formattedPhoneNumber) => {
       console.error('Error updating key:', err);
       throw err;
     }
-      // Send OTP via Notify.lk
-      const message = `Welcome to LOVEBIRDS. Your registration code is ${newKey}`;
-      const notifyURL = `https://app.notify.lk/api/v1/send?user_id=${
-        process.env.NOTIFY_LK_USER_ID
-      }&api_key=${process.env.NOTIFY_LK_API_KEY}&sender_id=${
-        process.env.NOTIFY_LK_SENDER_ID
-      }&to=${formattedPhoneNumber}&message=${encodeURIComponent(
-        message
-      )}`;
+      // // Send OTP via Notify.lk
+      // const message = `Welcome to LOVEBIRDS. Your registration code is ${newKey}`;
+      // const notifyURL = `https://app.notify.lk/api/v1/send?user_id=${
+      //   process.env.NOTIFY_LK_USER_ID
+      // }&api_key=${process.env.NOTIFY_LK_API_KEY}&sender_id=${
+      //   process.env.NOTIFY_LK_SENDER_ID
+      // }&to=${formattedPhoneNumber}&message=${encodeURIComponent(
+      //   message
+      // )}`;
 
-      try {
-        const response = await fetch(notifyURL);
+      // try {
+      //   const response = await fetch(notifyURL);
 
-        // Check if the response status is OK
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.log(errorText);
-        }
+      //   // Check if the response status is OK
+      //   if (!response.ok) {
+      //       const errorText = await response.text();
+      //       console.log(errorText);
+      //   }
 
-        // Optionally parse JSON response if needed
-        const responseData = await response.json();
-        console.log('Notify.lk Response:', responseData);
-      } catch (fetchError) {
-        console.log(fetchError);
+      //   // Optionally parse JSON response if needed
+      //   const responseData = await response.json();
+      //   console.log('Notify.lk Response:', responseData);
+      // } catch (fetchError) {
+      //   console.log(fetchError);
      
-      }
+      // }
   });
 };
 
