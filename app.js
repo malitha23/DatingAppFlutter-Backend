@@ -7,6 +7,7 @@ const cron = require("node-cron");
 const socketService = require("./services/user-Socket-Service");
 const authMiddleware = require('./middlewares/authMiddleware.js');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 dotenv.config();
 const app = express();
@@ -24,13 +25,16 @@ const authRoutecoins = require("./routes/coins");
 const authRoutePackages = require("./routes/packages");
 const authRouteAdmin= require("./routes/admin");
 const authRouteForgetpassword = require("./routes/forgetpassword");
+const authRouteForapkUpdate = require("./routes/apkUpdate");
 const authRouteSubscriptionPlans = require("./routes/subscriptionPlans");
 const { pusher, sendHartingNotification, subscribeToChannel } = require('./services/pusherService'); // Import the pusher instance and function
 
 app.get("/", (req, res) => res.send("Hello World!"));
+app.use('/api/apk', express.static(path.join(__dirname, 'uploadsUpdateApks')));
 app.use("/api/user", authRoute);
 app.use("/api/coins", authRoutecoins);
 app.use("/api/packages", authRoutePackages);
+app.use("/api/apkUpdate", authRouteForapkUpdate);
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use("/api/forgetpassword", authRouteForgetpassword);
 app.use("/api/subscriptionPlans", authRouteSubscriptionPlans);
