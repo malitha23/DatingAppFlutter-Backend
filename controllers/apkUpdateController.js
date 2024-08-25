@@ -16,7 +16,10 @@ const apkDir = path.join(__dirname, '../uploadsUpdateApks/');
 function getLatestApk() {
   const files = fs.readdirSync(apkDir);
   const apkFiles = files.filter(file => file.endsWith('.apk'));
-  
+   // If no APK files are found, return null
+   if (apkFiles.length === 0) {
+    return null;
+  }
   // Sort files by version number
   apkFiles.sort((a, b) => {
     const versionA = a.match(/(\d+\.\d+\.\d+)/)[0];
@@ -37,13 +40,26 @@ function getLatestApk() {
 // Controller function for handling the version check request
 const versionCheck = (req, res) => {
   const latestApk = getLatestApk();
-  res.json({
-    version: latestApk.version, // Dynamically set to the latest version
-    update_message: "A new version of the app is available. Please update to the latest version for the best experience.",
-    force_update: false, // Set to true if you want to force the update
-    download_url: `/apk/${latestApk.filename}` // Serve the latest APK file
-  });
+
+  if (latestApk === null) {
+    // Set status code 202 (Accepted) when no APK is available
+    res.status(202).json({
+      version: "0.0.0", // Default version when no APK is found
+      update_message: "No update available at the moment.",
+      force_update: false, // No force update when no APK is available
+      download_url: null // No download URL when no APK is available
+    });
+  } else {
+    // Set status code 200 (OK) when an APK is available
+    res.status(200).json({
+      version: latestApk.version, // Dynamically set to the latest version
+      update_message: `A new version (${latestApk.version}) of the app is available. Please update to the latest version for the best experience.`,
+      force_update: false, // Set to true if you want to force the update
+      download_url: `/apk/${latestApk.filename}` // Serve the latest APK file
+    });
+  }
 };
+
 
 
 module.exports = {
