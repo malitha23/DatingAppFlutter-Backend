@@ -168,6 +168,7 @@ const insertFreePackageOneMonth = async (req, res) => {
   }
   const userId = userData["id"];
   const  whatsAppNumber  = userData["whatsAppNumber"];
+  const  gender  = userData["gender"];
   const formattedPhoneNumber = formatPhoneNumber(whatsAppNumber);
 
   // Check if `whatsAppNumber` exists and is of valid length
@@ -178,9 +179,33 @@ const insertFreePackageOneMonth = async (req, res) => {
   }
 
   // Get the current timestamp for created_at and updated_at in Sri Lanka time
+  // Get the current timestamp for created_at and updated_at in Sri Lanka time
   const currentTimestamp = moment
     .tz("Asia/Colombo")
     .format("YYYY-MM-DD HH:mm:ss");
+
+  // Default values
+  let price = 0;
+  let duration = 1;
+  let plan_name = "basic";
+  let payment_status = 1;
+
+  // Calculate packageStartDate and packageStartEnd
+  const packageStartDate = currentTimestamp;
+  let packageStartEnd = moment
+    .tz("Asia/Colombo")
+    .add(1, "month")
+    .format("YYYY-MM-DD HH:mm:ss");
+
+  // Adjust values based on gender
+  if (gender === 'Female') {
+    price = 500;
+    duration = 12;
+    packageStartEnd = moment
+      .tz("Asia/Colombo")
+      .add(12, "months")
+      .format("YYYY-MM-DD HH:mm:ss");
+  }
 
 
 
@@ -190,17 +215,7 @@ const insertFreePackageOneMonth = async (req, res) => {
     VALUES 
       (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
-  const price = 0;
-  const duration = 1;
-  const plan_name = "basic";
-  const payment_status = 1;
-
-  // Calculate packageStartDate and packageStartEnd
-  const packageStartDate = currentTimestamp;
-  const packageStartEnd = moment
-    .tz("Asia/Colombo")
-    .add(1, "month")
-    .format("YYYY-MM-DD HH:mm:ss");
+ 
 
   const values = [
     userId,

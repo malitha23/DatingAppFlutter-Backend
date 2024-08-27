@@ -172,7 +172,7 @@ WHERE
     // Query the database to retrieve user data based on the NIC number
     db.query(sql, [nic], (err, results) => {
       if (err) {
-        console.error(err);
+       //console.error(err);
         reject(err); // Reject with the error object
       } else {
         // If user data is found, resolve the promise with the user data
@@ -253,7 +253,7 @@ const getUserDataForProfileView = (userId, friendId) => {
     // Query the database to retrieve user data based on the NIC number
     db.query(sql, [userId, userId, friendId], (err, results) => {
       if (err) {
-        console.error(err);
+       // console.error(err);
         reject(err); // Reject with the error object
       } else {
         // If user data is found, resolve the promise with the user data
