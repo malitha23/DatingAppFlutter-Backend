@@ -925,7 +925,7 @@ const getAllUsersToHomepage = async (req, res) => {
     LEFT JOIN 
     register_user_portfolio_data rupd ON u.id = rupd.userId
     WHERE 
-    u.id != ? AND u.role != 'Admin' AND rsud.gender != ? AND u.status = 1 AND
+    u.id != ? AND rsud.gender != ? AND u.status = 1 AND
     (u.nic LIKE ? OR rsud.interests LIKE ? OR rupd.firstName LIKE ? OR rupd.lastName LIKE ?)
     ${location ? "AND rupd.location LIKE ?" : ""}
     ${generatedKey ? "AND u.generatedKey LIKE ?" : ""}
