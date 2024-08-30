@@ -18,6 +18,7 @@ const io = new Server(server);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors({ origin: "*" }));
+app.use(express.static(path.join(__dirname, "public", "apkDownloadPage")));
 
 const port = process.env.PORT || 3000;
 const authRoute = require("./routes/user");
@@ -29,7 +30,9 @@ const authRouteForapkUpdate = require("./routes/apkUpdate");
 const authRouteSubscriptionPlans = require("./routes/subscriptionPlans");
 const { pusher, sendHartingNotification, subscribeToChannel } = require('./services/pusherService'); // Import the pusher instance and function
 
-app.get("/", (req, res) => res.send("Hello World!"));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "apkDownloadPage", 'index.html'));
+});
 app.use('/api/apk', express.static(path.join(__dirname, 'uploadsUpdateApks')));
 app.use("/api/user", authRoute);
 app.use("/api/coins", authRoutecoins);
