@@ -4,6 +4,7 @@ const getUserData = require('../controllers/UserController.js');
 const adminMiddleware = async (req, res, next) => {
     // Assuming you store user roles in the request object
     // You might get user info from a JWT token, session, etc.
+    // change admin word
     const user = req.user;
     const userData = await getUserData.getUserData(user.nic);
 
@@ -14,5 +15,5 @@ const adminMiddleware = async (req, res, next) => {
     }
 };
 
-
+// 
 module.exports = adminMiddleware;
