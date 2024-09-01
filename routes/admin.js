@@ -8,6 +8,14 @@ const UserController = require("../controllers/UserController.js");
 router.use(adminMiddleware);
 
 // Admin routes
+router.get("/getAllNewUsers", async (req, res, next) => {
+    try {
+        await adminController.getAllNewUsers (req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
 router.get("/getAllUsers", async (req, res, next) => {
     try {
         await UserController.getAllUsersToHomepage(req, res);

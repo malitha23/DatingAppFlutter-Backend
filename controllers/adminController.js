@@ -7,11 +7,78 @@ const { verifyToken, getUserData } = require("./UserController");
 
 const db = database.connection;
 
-const getAllUsers = async (req, res) => {
+const getAllNewUsers = async (req, res) => {
   try {
-    res.status(200).json("users");
+      const sql = `
+          SELECT 
+              u.id AS user_id,
+              u.generatedKey,
+              u.nic,
+              u.online,
+              u.status,
+              u.created_at,
+              u.updated_at,
+              rsud.id AS rsud_id,
+              rsud.userId AS rsud_userId,
+              rsud.gender,
+              rsud.age,
+              rsud.birthday,
+              rsud.interests,
+              rsud.profilePic,
+              rsud.otherImages,
+              rsud.terms_agree,
+              rsud.nicFrontImage,
+              rsud.nicBackImage,
+              rupd.id AS rupd_id,
+              rupd.userId AS rupd_userId,
+              rupd.firstName,
+              rupd.lastName,
+              rupd.whatsAppNumber,
+              rupd.job,
+              rupd.location,
+              rupd.marriageStatus,
+              rupd.heightFt,
+              rupd.heightIn,
+              rupd.weight,
+              rupd.address,
+              rupd.personalityDescription,
+              rupd.alcoholConsumption,
+              rupd.lookingFor,
+              pkbd.price AS packagePrice,
+              pkbd.duration AS packageDurationMonth,
+              pkbd.packageStartDate,
+              pkbd.packageStartEnd AS packageEndDate,
+              pkbd.plan_name,
+              pkbd.payment_date,
+              pkbd.payment_status
+          FROM 
+              users u
+          LEFT JOIN 
+              register_steps_user_data rsud ON u.id = rsud.userId
+          LEFT JOIN 
+              (
+                  SELECT * 
+                  FROM packagesbuydata pbd
+                  WHERE pbd.id IN (SELECT MAX(id) FROM packagesbuydata GROUP BY userId)
+              ) pkbd ON u.id = pkbd.userId
+          LEFT JOIN 
+              register_user_portfolio_data rupd ON u.id = rupd.userId
+          WHERE 
+              u.status = 0
+          ORDER BY 
+                u.created_at DESC;   
+      `;
+
+      db.query(sql, (err, results) => {
+        if (err) {
+          console.error("Error retrieving users: ", err);
+          return res.status(500).json({ message: "Internal server error" });
+        }
+        res.status(200).json(results);
+      });
   } catch (error) {
-    res.status(500).json({ message: "Error retrieving users", error });
+      console.error('Error retrieving users:', error);
+      res.status(500).json({ message: 'Error retrieving users', error });
   }
 };
 
@@ -619,7 +686,6 @@ const deleteUserData = async (userId) => {
   try {
 
     // Delete user from all related tables
-    await deleteUser(userId);
     await deleteUserPortfolioData(userId);
     await deleteUserStepsData(userId);
     await deleteUserPackagesData(userId);
@@ -627,6 +693,7 @@ const deleteUserData = async (userId) => {
     await deleteFriendships(userId);
     await deleteMessages(userId);
     await deleteUserHarting(userId);
+    await deleteUser(userId);
 
     console.log(`User with ID ${userId} deleted successfully from all tables.`);
   } catch (error) {
@@ -1064,7 +1131,7 @@ const deleteSubscriptionPlan = (req, res) => {
 
 module.exports = {
   addNewUserForAdmin,
-  getAllUsers,
+  getAllNewUsers ,
   deleteUserData,
   updateUser,
   updateUserStatus,
