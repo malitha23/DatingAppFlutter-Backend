@@ -59,6 +59,15 @@ router.put("/UpdateUserStatusForAdmin/:userId", async (req, res, next) => {
     }
 });
 
+router.post("/UpdateUserBulkStatusForAdmin", async (req, res, next) => {
+    try {
+        await adminController.updateUserBulkStatuses(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
+
 router.put("/UpdateUserPackageForAdmin/:userId", async (req, res, next) => {
     try {
         await adminController.updateuserPackageData(req, res);

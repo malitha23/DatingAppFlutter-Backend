@@ -1,0 +1,266 @@
+/* Marketplace.css */
+
+/* Modal Styles */
+.modaldetails {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 99;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6); /* Darker semi-transparent background */
+    backdrop-filter: blur(6px); /* Slight blur for the background */
+    padding-top: 60px;
+    transition: opacity 0.3s ease; /* Smooth fade-in/out */
+}
+
+.modaldetails-content {
+    background-color: #ffffff;
+    margin: auto;
+    padding: 30px;
+    border-radius: 12px; /* More rounded corners */
+    width: 80%;
+    max-width: 500px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Slightly stronger shadow */
+    position: relative;
+    animation: slide-down 0.4s ease-out; /* Animation for showing the modal */
+    transition: all 0.3s ease; /* Smooth scaling */
+}
+
+.close {
+    color: #606770; /* Light grey color */
+    float: right;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.close:hover,
+.close:focus {
+    color: #ff5a5f; /* Red on hover for a more vibrant feel */
+    transform: scale(1.1); /* Slight scaling effect on hover */
+    text-decoration: none;
+}
+
+/* Additional Styling for Modal Content */
+.modal-header {
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    font-size: 1.5em; /* Larger font for the header */
+    color: #333; /* Darker header text color */
+}
+
+.modal-body {
+    padding: 20px;
+    text-align: center;
+    line-height: 1.6;
+    font-size: 1.1em; /* Slightly larger body text */
+    color: #555; /* Softer body text color */
+}
+
+.profile-pic {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin-bottom: 15px;
+    object-fit: cover;
+    border: 3px solid #f0f0f0; /* Slightly thicker, lighter border */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); /* Soft shadow for the profile pic */
+}
+
+.nic-images {
+    display: flex;
+    justify-content: space-around; /* Even spacing between images */
+    margin-top: 20px;
+    gap: 10px; /* Added gap for space between images */
+}
+
+.nic-image {
+    width: 45%;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    transition: transform 0.2s ease; /* Image hover effect */
+}
+
+.nic-image:hover {
+    transform: scale(1.05); /* Slight zoom on hover */
+}
+
+.user-details {
+    margin-top: 20px;
+    text-align: left;
+    color: #333; /* Darker grey for text */
+    font-size: 1em; /* Standard font size */
+}
+
+.user-details p {
+    margin: 8px 0;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    .modaldetails-content {
+        width: 90%;
+        padding: 20px;
+    }
+
+    .nic-images {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .nic-image {
+        width: 80%;
+        margin-bottom: 10px;
+    }
+
+    .profile-pic {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+/* Animation for modal appearance */
+@keyframes slide-down {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+/* App.css */
+.custom-checkbox .p-checkbox-box {
+    /* background-color: #ffffff; */
+    border: 2px solid rgb(181, 181, 181);
+  }
+
+  
+  .custom-checkbox .p-checkbox-box.p-highlight {
+    background-color: red; /* Background color when checked */
+    border-color: red; /* Border color when checked */
+  }
+  
+  .custom-checkbox .p-checkbox-box.p-disabled {
+    background-color: gray; /* Background color when disabled */
+    border-color: gray; /* Border color when disabled */
+  }
+  
+  /* Custom Dialog Styles */
+.custom-dialog .p-dialog {
+    border-radius: 10px; /* Rounded corners */
+
+    max-width: 90%; /* Responsive width */
+  }
+  
+  .custom-dialog .p-dialog-header {
+    background-color: #02db09; /* Header background color */
+    color: white; /* Header text color */
+  }
+  
+  .custom-dialog .p-dialog-content {
+    padding: 20px; /* Content padding */
+    font-size: 16px; /* Font size */
+    font-weight: bold;
+  }
+  
+  .custom-dialog .p-dialog-footer {
+    background-color: #f1f1f1; /* Footer background color */
+    border-top: 1px solid #ddd; /* Footer border */
+  }
+  
+  .custom-dialog .p-button-success {
+    background-color: #02db09; /* Success button color */
+    padding: 10px;
+    border: none; /* Remove border */
+    border-radius: 20px;
+    color: white;
+    margin-right: 10px;
+  }
+  
+  .custom-dialog .p-button-danger {
+    background-color: #f44336; /* Danger button color */
+    border: none; /* Remove border */
+     padding: 10px;
+    border: none; /* Remove border */
+    border-radius: 20px;
+    color: white;
+  }
+  
+  .custom-dialog .p-button-success:hover,
+  .custom-dialog .p-button-danger:hover {
+    opacity: 0.8; /* Button hover effect */
+  }
+  
+  .custom-spinner {
+    border: 16px solid #b8b7b7;
+    border-top: 16px solid #002036;
+    border-radius: 50%;
+    width: 90px;
+    height: 90px;
+    animation: spin 1s linear infinite;
+    margin: auto;
+    display: block;
+    margin-top: 100px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .bottom-sheet {
+    position: fixed;
+    top: 0;
+    left: 50%; /* Center horizontally */
+    width: 60%; /* Width of the bottom sheet */
+    max-height: 50%; /* Adjust as needed */
+    overflow: auto;
+    background: rgba(14, 13, 13, 0.1); /* Transparent background */
+    backdrop-filter: blur(10px); /* Apply blur effect */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); /* Shadow for depth */
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(-50%) translateY(-100%); /* Hide above the top edge */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 999;
+    border-radius: 12px; /* Optional: rounded corners */
+  }
+  
+  .bottom-sheet.visible {
+    transform: translateX(-50%) translateY(0); /* Slide down into view */
+  }
+  
+  .bottom-sheet-header,
+  .bottom-sheet-body,
+  .bottom-sheet-footer {
+    width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  
+  .bottom-sheet-body {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-weight: bold;
+  }
+  
+  .bottom-sheet-footer {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    border-top: 1px solid #ddd;
+    padding: 16px;
+  }
+  

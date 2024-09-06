@@ -854,6 +854,40 @@ const updateUserStatus = async (req, res) => {
   });
 };
 
+// Function to handle bulk user status updates
+const updateUserBulkStatuses = async (req, res) => {
+  const { users } = req.body;
+
+  if (!Array.isArray(users) || users.length === 0) {
+    return res.status(400).json({ message: 'Invalid user data' });
+  }
+
+  // Construct SQL queries for bulk update
+  const updateQueries = users.map(user => {
+    return {
+      query: 'UPDATE `users` SET `status` = ? WHERE `id` = ?',
+      values: [user.status, user.id]
+    };
+  });
+
+  try {
+    // Execute queries in sequence
+    for (const { query, values } of updateQueries) {
+      await new Promise((resolve, reject) => {
+        db.query(query, values, (err, results) => {
+          if (err) return reject(err);
+          resolve(results);
+        });
+      });
+    }
+    res.status(200).json({ message: 'User statuses updated successfully' });
+  } catch (err) {
+    console.error('Error updating user statuses:', err);
+    res.status(500).json({ message: 'Database error', error: err });
+  }
+};
+
+
 
 const updateuserPackageData = async (req, res) => {
   const userId = req.params.userId;
@@ -1144,5 +1178,6 @@ module.exports = {
   getsubscriptionPlansForAdmin,
   deleteSubscriptionPlan,
   updateSubscriptionPlan,
-  addSubscriptionPlan
+  addSubscriptionPlan,
+  updateUserBulkStatuses
 };
