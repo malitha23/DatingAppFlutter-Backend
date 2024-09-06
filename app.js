@@ -35,7 +35,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, "public", "apkDownloadPage", 'index.html'));
 });
 
-app.get('/admin', (req, res) => {
+app.get('/adminsite', (req, res) => {
   res.sendFile(path.join(__dirname, "public", "adminsite", "build", 'index.html'));
 });
 
