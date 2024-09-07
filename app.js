@@ -35,8 +35,8 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, "public", "apkDownloadPage", 'index.html'));
 });
 
-app.get('/adminsite', (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "adminsite", "build", 'index.html'));
+app.get('/adminsite/', (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "adminsite/build", 'index.html'));
 });
 
 app.use('/api/apk', express.static(path.join(__dirname, 'uploadsUpdateApks')));
