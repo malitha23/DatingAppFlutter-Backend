@@ -19,8 +19,6 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors({ origin: "*" }));
 app.use(express.static(path.join(__dirname, "public", "apkDownloadPage")));
-app.use('/adminsite', express.static(path.join(__dirname, 'public', 'adminsite', 'build')));
-
 
 const port = process.env.PORT || 3000;
 const authRoute = require("./routes/user");
@@ -34,11 +32,6 @@ const { pusher, sendHartingNotification, subscribeToChannel } = require('./servi
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, "public", "apkDownloadPage", 'index.html'));
-});
-
-// Serve the main HTML file
-app.get('/adminsite/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'adminsite', 'build', 'index.html'));
 });
 
 
