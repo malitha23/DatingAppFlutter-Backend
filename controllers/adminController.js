@@ -1014,6 +1014,7 @@ const updateUserStatus = async (req, res) => {
 };
 
 // Function to handle bulk user status updates
+// Function to update user statuses in bulk
 const updateUserBulkStatuses = async (req, res) => {
   const { users } = req.body;
 
@@ -1021,24 +1022,74 @@ const updateUserBulkStatuses = async (req, res) => {
     return res.status(400).json({ message: "Invalid user data" });
   }
 
-  // Construct SQL queries for bulk update
-  const updateQueries = users.map((user) => {
-    return {
-      query: "UPDATE `users` SET `status` = ? WHERE `id` = ?",
-      values: [user.status, user.id],
-    };
-  });
-
   try {
-    // Execute queries in sequence
-    for (const { query, values } of updateQueries) {
+    // Loop through each user to check for status and profile picture
+    for (const user of users) {
+      const { id: userId, status } = user;
+
+      // Only proceed with profilePic check if status == 1
+      if (status == 1) {
+        const checkProfilePicQuery =
+          'SELECT * FROM `register_steps_user_data` WHERE (`profilePic` IS NULL OR `profilePic` = "") AND `userId` = ?';
+
+        // Await for each DB query using a promise
+        const profileCheckResult = await new Promise((resolve, reject) => {
+          db.query(checkProfilePicQuery, [userId], (err, results) => {
+            if (err) return reject(err);
+            resolve(results);
+          });
+        });
+
+        // If no profile picture found, upload the default image
+        if (profileCheckResult.length > 0) {
+          const defaultImage = path.join(__dirname, "../noProfileImage.png");
+          const userDir = path.join(__dirname, "../uploadsImages", `${userId}`);
+          const newImagePath = path.join(userDir, "noProfileImage.png");
+
+          // Create user directory if it doesn't exist
+          if (!fs.existsSync(userDir)) {
+            fs.mkdirSync(userDir, { recursive: true });
+          }
+
+          // Copy default image to user's directory
+          await new Promise((resolve, reject) => {
+            fs.copyFile(defaultImage, newImagePath, (err) => {
+              if (err) return reject(err);
+              resolve();
+            });
+          });
+
+          // Update the database with the default profile picture path
+          const profilePicPath = `/user/view/${userId}/noProfileImage.png`;
+          const updateProfilePicQuery =
+            "UPDATE `register_steps_user_data` SET `profilePic` = ? WHERE `userId` = ?";
+
+          await new Promise((resolve, reject) => {
+            db.query(
+              updateProfilePicQuery,
+              [profilePicPath, userId],
+              (err, results) => {
+                if (err) return reject(err);
+                resolve(results);
+              }
+            );
+          });
+        }
+      }
+
+      // Proceed with updating the user's status
+      const updateQuery = "UPDATE `users` SET `status` = ? WHERE `id` = ?";
+      const values = [status, userId];
+
       await new Promise((resolve, reject) => {
-        db.query(query, values, (err, results) => {
+        db.query(updateQuery, values, (err, results) => {
           if (err) return reject(err);
           resolve(results);
         });
       });
     }
+
+    // If everything was successful, return a success message
     res.status(200).json({ message: "User statuses updated successfully" });
   } catch (err) {
     console.error("Error updating user statuses:", err);
