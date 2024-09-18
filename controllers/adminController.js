@@ -972,33 +972,27 @@ const updateUserStatus = async (req, res) => {
                   .json({ message: "Database error", error: err });
               }
               // Proceed with updating user status if status != 1 (no profile image upload)
-              const updateQuery =
-                "UPDATE `users` SET `status` = ? WHERE `id` = ?";
-              const values = [status, userId];
-              db.query(updateQuery, values, (err, results) => {
-                if (err) {
-                  console.error("Error updating user status:", err);
-                  return res
-                    .status(500)
-                    .json({ message: "Database error", error: err });
-                }
-                if (results.affectedRows === 0) {
-                  return res.status(404).json({ message: "User not found" });
-                }
-                return res
-                  .status(200)
-                  .json({ message: "User status updated successfully" });
-              });
             }
           );
         });
-      } else {
-        return res
-          .status(400)
-          .json({
-            message: "Profile picture already exists, status update aborted.",
-          });
       }
+
+      const updateQuery = "UPDATE `users` SET `status` = ? WHERE `id` = ?";
+      const values = [status, userId];
+      db.query(updateQuery, values, (err, results) => {
+        if (err) {
+          console.error("Error updating user status:", err);
+          return res
+            .status(500)
+            .json({ message: "Database error", error: err });
+        }
+        if (results.affectedRows === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        return res
+          .status(200)
+          .json({ message: "User status updated successfully" });
+      });
     });
   } else {
     // Proceed with updating user status if status != 1 (no profile image upload)
@@ -1307,12 +1301,10 @@ const addSubscriptionPlan = (req, res) => {
           .json({ message: "Error adding subscription plan" });
       }
 
-      res
-        .status(201)
-        .json({
-          message: "Subscription plan added successfully",
-          id: results.insertId,
-        });
+      res.status(201).json({
+        message: "Subscription plan added successfully",
+        id: results.insertId,
+      });
     }
   );
 };
