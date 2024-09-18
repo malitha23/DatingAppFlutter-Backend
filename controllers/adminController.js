@@ -4,12 +4,33 @@ const moment = require("moment-timezone");
 const fetch = require("node-fetch");
 const jwt = require("jsonwebtoken");
 const { verifyToken, getUserData } = require("./UserController");
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
+
+// Set up multer for image uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const userDir = path.join(__dirname, "../uploadsImages", req.params.userId);
+    // Create user directory if it doesn't exist
+    if (!fs.existsSync(userDir)) {
+      fs.mkdirSync(userDir, { recursive: true });
+    }
+    cb(null, userDir);
+  },
+  filename: (req, file, cb) => {
+    // Save the file with the original name or custom name
+    cb(null, file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
 
 const db = database.connection;
 
 const getAllNewUsers = async (req, res) => {
   try {
-      const sql = `
+    const sql = `
           SELECT 
               u.id AS user_id,
               u.generatedKey,
@@ -69,16 +90,16 @@ const getAllNewUsers = async (req, res) => {
                 u.created_at DESC;   
       `;
 
-      db.query(sql, (err, results) => {
-        if (err) {
-          console.error("Error retrieving users: ", err);
-          return res.status(500).json({ message: "Internal server error" });
-        }
-        res.status(200).json(results);
-      });
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error("Error retrieving users: ", err);
+        return res.status(500).json({ message: "Internal server error" });
+      }
+      res.status(200).json(results);
+    });
   } catch (error) {
-      console.error('Error retrieving users:', error);
-      res.status(500).json({ message: 'Error retrieving users', error });
+    console.error("Error retrieving users:", error);
+    res.status(500).json({ message: "Error retrieving users", error });
   }
 };
 
@@ -202,23 +223,19 @@ const addNewUserForAdmin = async (req, res) => {
                         if (err) {
                           await deleteUser(userId);
                           await deleteUserStepsData(userId);
-                          return res
-                            .status(500)
-                            .json({
-                              message: "Database query error",
-                              error: err,
-                            });
+                          return res.status(500).json({
+                            message: "Database query error",
+                            error: err,
+                          });
                         }
 
                         if (results.length > 0) {
                           await deleteUser(userId);
                           await deleteUserStepsData(userId);
                           // WhatsApp number already exists
-                          return res
-                            .status(409)
-                            .json({
-                              message: "WhatsApp number already exists",
-                            });
+                          return res.status(409).json({
+                            message: "WhatsApp number already exists",
+                          });
                         }
                         // Insert user portfolio data
                         const insertPortfolioSql = `
@@ -252,12 +269,9 @@ const addNewUserForAdmin = async (req, res) => {
                               await deleteUser(userId);
                               await deleteUserStepsData(userId);
                               console.error(portfolioErr);
-                              return res
-                                .status(500)
-                                .json({
-                                  message:
-                                    "Error inserting user portfolio data",
-                                });
+                              return res.status(500).json({
+                                message: "Error inserting user portfolio data",
+                              });
                             }
 
                             // Get the current timestamp for created_at and updated_at
@@ -289,11 +303,9 @@ const addNewUserForAdmin = async (req, res) => {
                                   await deleteUserStepsData(userId);
                                   await deleteUserPortfolioData(userId);
 
-                                  return res
-                                    .status(500)
-                                    .json({
-                                      message: "Error inserting coin balance",
-                                    });
+                                  return res.status(500).json({
+                                    message: "Error inserting coin balance",
+                                  });
                                 }
                                 const reqs = {
                                   userId,
@@ -681,10 +693,7 @@ const deleteUserHarting = async (userId) => {
 };
 
 const deleteUserData = async (userId) => {
-
-
   try {
-
     // Delete user from all related tables
     await deleteUserPortfolioData(userId);
     await deleteUserStepsData(userId);
@@ -697,14 +706,11 @@ const deleteUserData = async (userId) => {
 
     console.log(`User with ID ${userId} deleted successfully from all tables.`);
   } catch (error) {
-   
     console.error(`Error deleting user with ID ${userId}:`, error);
     throw error;
   } finally {
-  
   }
 };
-
 
 const updateUser = async (req, res) => {
   const userId = req.params.userId;
@@ -739,57 +745,24 @@ const updateUser = async (req, res) => {
 
   try {
     // Check if user exists
-    db.query("SELECT * FROM users WHERE id = ?", [userId], async (err, results) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ message: "Error checking user existence" });
-      }
-
-      if (results.length === 0) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // If a new password is provided, hash it
-      let updateValues = [nic, firstName, lastName, whatsAppNumber, job, location, marriageStatus, heightFt, heightIn, weight, address, personalityDescription, alcoholConsumption, lookingFor, gender, age, birthday, JSON.stringify(interests), profilePic, JSON.stringify(otherImages), terms_agree, nicfrontImage, nicbackImage, userId];
-      
-      let updateSql = `
-        UPDATE register_steps_user_data
-        SET gender = ?, age = ?, birthday = ?, interests = ?, profilePic = ?, otherImages = ?, terms_agree = ?, nicFrontImage = ?, nicBackImage = ?
-        WHERE userId = ?
-      `;
-
-      if (password) {
-        // Hash the new password if it's being updated
-        const hashedPassword = await bcrypt.hash(password, 10);
-        db.query("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, userId], (err, result) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).json({ message: "Error updating user password" });
-          }
-        });
-      }
-
-      db.query("UPDATE users SET status = ? WHERE id = ?", [userStatus, userId], (err, result) => {
+    db.query(
+      "SELECT * FROM users WHERE id = ?",
+      [userId],
+      async (err, results) => {
         if (err) {
           console.error(err);
-          return res.status(500).json({ message: "Error updating user status" });
-        }
-      });
-
-      db.query(updateSql, updateValues, async (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ message: "Error updating user details" });
+          return res
+            .status(500)
+            .json({ message: "Error checking user existence" });
         }
 
-        // Update user portfolio data
-        const updatePortfolioSql = `
-          UPDATE register_user_portfolio_data
-          SET firstName = ?, lastName = ?, whatsAppNumber = ?, job = ?, location = ?, marriageStatus = ?, heightFt = ?, heightIn = ?, weight = ?, address = ?, personalityDescription = ?, alcoholConsumption = ?, lookingFor = ?
-          WHERE userId = ?
-        `;
+        if (results.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
 
-        const portfolioValues = [
+        // If a new password is provided, hash it
+        let updateValues = [
+          nic,
           firstName,
           lastName,
           whatsAppNumber,
@@ -803,55 +776,247 @@ const updateUser = async (req, res) => {
           personalityDescription,
           alcoholConsumption,
           lookingFor,
+          gender,
+          age,
+          birthday,
+          JSON.stringify(interests),
+          profilePic,
+          JSON.stringify(otherImages),
+          terms_agree,
+          nicfrontImage,
+          nicbackImage,
           userId,
         ];
 
-        db.query(updatePortfolioSql, portfolioValues, async (portfolioErr, portfolioResult) => {
-          if (portfolioErr) {
-            console.error(portfolioErr);
-            return res.status(500).json({ message: "Error updating user portfolio data" });
+        let updateSql = `
+        UPDATE register_steps_user_data
+        SET gender = ?, age = ?, birthday = ?, interests = ?, profilePic = ?, otherImages = ?, terms_agree = ?, nicFrontImage = ?, nicBackImage = ?
+        WHERE userId = ?
+      `;
+
+        if (password) {
+          // Hash the new password if it's being updated
+          const hashedPassword = await bcrypt.hash(password, 10);
+          db.query(
+            "UPDATE users SET password = ? WHERE id = ?",
+            [hashedPassword, userId],
+            (err, result) => {
+              if (err) {
+                console.error(err);
+                return res
+                  .status(500)
+                  .json({ message: "Error updating user password" });
+              }
+            }
+          );
+        }
+
+        db.query(
+          "UPDATE users SET status = ? WHERE id = ?",
+          [userStatus, userId],
+          (err, result) => {
+            if (err) {
+              console.error(err);
+              return res
+                .status(500)
+                .json({ message: "Error updating user status" });
+            }
+          }
+        );
+
+        db.query(updateSql, updateValues, async (err, result) => {
+          if (err) {
+            console.error(err);
+            return res
+              .status(500)
+              .json({ message: "Error updating user details" });
           }
 
-          // Update coin balance
-          const updateCoinBalanceSql = `
+          // Update user portfolio data
+          const updatePortfolioSql = `
+          UPDATE register_user_portfolio_data
+          SET firstName = ?, lastName = ?, whatsAppNumber = ?, job = ?, location = ?, marriageStatus = ?, heightFt = ?, heightIn = ?, weight = ?, address = ?, personalityDescription = ?, alcoholConsumption = ?, lookingFor = ?
+          WHERE userId = ?
+        `;
+
+          const portfolioValues = [
+            firstName,
+            lastName,
+            whatsAppNumber,
+            job,
+            location,
+            marriageStatus,
+            heightFt,
+            heightIn,
+            weight,
+            address,
+            personalityDescription,
+            alcoholConsumption,
+            lookingFor,
+            userId,
+          ];
+
+          db.query(
+            updatePortfolioSql,
+            portfolioValues,
+            async (portfolioErr, portfolioResult) => {
+              if (portfolioErr) {
+                console.error(portfolioErr);
+                return res
+                  .status(500)
+                  .json({ message: "Error updating user portfolio data" });
+              }
+
+              // Update coin balance
+              const updateCoinBalanceSql = `
             UPDATE coin_balance
             SET coin_balance = ?
             WHERE userId = ?
           `;
 
-          db.query(updateCoinBalanceSql, [coin_balance, userId], (coinErr, coinResult) => {
-            if (coinErr) {
-              console.error(coinErr);
-              return res.status(500).json({ message: "Error updating coin balance" });
-            }
+              db.query(
+                updateCoinBalanceSql,
+                [coin_balance, userId],
+                (coinErr, coinResult) => {
+                  if (coinErr) {
+                    console.error(coinErr);
+                    return res
+                      .status(500)
+                      .json({ message: "Error updating coin balance" });
+                  }
 
-            res.status(200).json({ message: "User updated successfully" });
-          });
+                  res
+                    .status(200)
+                    .json({ message: "User updated successfully" });
+                }
+              );
+            }
+          );
         });
-      });
-    });
+      }
+    );
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Error processing request" });
   }
 };
 
+// const updateUserStatus = async (req, res) => {
+//   const userId = req.params.userId;
+//   const { status } = req.body;
+
+//   const query = 'UPDATE `users` SET `status` = ? WHERE `id` = ?';
+//   const values = [status, userId];
+//   db.query(query, values, async (err, results) => {
+//     if (err) {
+//       console.error('Error updating user status:', err);
+//       return res.status(500).json({ message: 'Database error', error: err });
+//     }
+//     if (results.affectedRows === 0) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+//     res.status(200).json({ message: 'User status updated successfully' });
+//   });
+// };
+
+// Function to update user status
 const updateUserStatus = async (req, res) => {
   const userId = req.params.userId;
   const { status } = req.body;
 
-  const query = 'UPDATE `users` SET `status` = ? WHERE `id` = ?';
-  const values = [status, userId];
-  db.query(query, values, async (err, results) => {
-    if (err) {
-      console.error('Error updating user status:', err);
-      return res.status(500).json({ message: 'Database error', error: err });
-    }
-    if (results.affectedRows === 0) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.status(200).json({ message: 'User status updated successfully' });
-  });
+  // Only proceed if status == 1
+  if (status == 1) {
+    // Query to check if profilePic is NULL or an empty string
+    const checkProfilePicQuery =
+      'SELECT * FROM `register_steps_user_data` WHERE (`profilePic` IS NULL OR `profilePic` = "") AND `userId` = ?';
+
+    db.query(checkProfilePicQuery, [userId], (err, results) => {
+      if (err) {
+        console.error("Error checking profile picture:", err);
+        return res.status(500).json({ message: "Database error", error: err });
+      }
+
+      // If no profile picture found, set default 'noProfileImage.png'
+      if (results.length > 0) {
+        const defaultImage = path.join(__dirname, "../noProfileImage.png");
+        const userDir = path.join(__dirname, "../uploadsImages", userId);
+        const newImagePath = path.join(userDir, "noProfileImage.png");
+
+        // Create user directory if not exists
+        if (!fs.existsSync(userDir)) {
+          fs.mkdirSync(userDir, { recursive: true });
+        }
+
+        // Copy 'noProfileImage.png' to user's directory
+        fs.copyFile(defaultImage, newImagePath, (err) => {
+          if (err) {
+            console.error("Error copying default image:", err);
+            return res
+              .status(500)
+              .json({ message: "Error setting default profile picture" });
+          }
+
+          // Update the database with the correct path to 'noProfileImage.png'
+          const profilePicPath = `/user/view/${userId}/noProfileImage.png`;
+          const updateProfilePicQuery =
+            "UPDATE `register_steps_user_data` SET `profilePic` = ? WHERE `userId` = ?";
+
+          db.query(
+            updateProfilePicQuery,
+            [profilePicPath, userId],
+            (err, results) => {
+              if (err) {
+                console.error("Error updating profile picture:", err);
+                return res
+                  .status(500)
+                  .json({ message: "Database error", error: err });
+              }
+              // Proceed with updating user status if status != 1 (no profile image upload)
+              const updateQuery =
+                "UPDATE `users` SET `status` = ? WHERE `id` = ?";
+              const values = [status, userId];
+              db.query(updateQuery, values, (err, results) => {
+                if (err) {
+                  console.error("Error updating user status:", err);
+                  return res
+                    .status(500)
+                    .json({ message: "Database error", error: err });
+                }
+                if (results.affectedRows === 0) {
+                  return res.status(404).json({ message: "User not found" });
+                }
+                return res
+                  .status(200)
+                  .json({ message: "User status updated successfully" });
+              });
+            }
+          );
+        });
+      } else {
+        return res
+          .status(400)
+          .json({
+            message: "Profile picture already exists, status update aborted.",
+          });
+      }
+    });
+  } else {
+    // Proceed with updating user status if status != 1 (no profile image upload)
+    const updateQuery = "UPDATE `users` SET `status` = ? WHERE `id` = ?";
+    const values = [status, userId];
+    db.query(updateQuery, values, (err, results) => {
+      if (err) {
+        console.error("Error updating user status:", err);
+        return res.status(500).json({ message: "Database error", error: err });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      return res
+        .status(200)
+        .json({ message: "User status updated successfully" });
+    });
+  }
 };
 
 // Function to handle bulk user status updates
@@ -859,14 +1024,14 @@ const updateUserBulkStatuses = async (req, res) => {
   const { users } = req.body;
 
   if (!Array.isArray(users) || users.length === 0) {
-    return res.status(400).json({ message: 'Invalid user data' });
+    return res.status(400).json({ message: "Invalid user data" });
   }
 
   // Construct SQL queries for bulk update
-  const updateQueries = users.map(user => {
+  const updateQueries = users.map((user) => {
     return {
-      query: 'UPDATE `users` SET `status` = ? WHERE `id` = ?',
-      values: [user.status, user.id]
+      query: "UPDATE `users` SET `status` = ? WHERE `id` = ?",
+      values: [user.status, user.id],
     };
   });
 
@@ -880,14 +1045,12 @@ const updateUserBulkStatuses = async (req, res) => {
         });
       });
     }
-    res.status(200).json({ message: 'User statuses updated successfully' });
+    res.status(200).json({ message: "User statuses updated successfully" });
   } catch (err) {
-    console.error('Error updating user statuses:', err);
-    res.status(500).json({ message: 'Database error', error: err });
+    console.error("Error updating user statuses:", err);
+    res.status(500).json({ message: "Database error", error: err });
   }
 };
-
-
 
 const updateuserPackageData = async (req, res) => {
   const userId = req.params.userId;
@@ -925,7 +1088,7 @@ const updateuserPackageData = async (req, res) => {
       plan_name,
       payment_date,
       payment_status,
-      userId
+      userId,
     ];
 
     // Execute SQL query
@@ -943,18 +1106,19 @@ const updateuserPackageData = async (req, res) => {
   }
 };
 
-
 const getHeartsPackages = async (req, res) => {
   try {
     // Query to select all records from the packages table
-    const sql = 'SELECT * FROM packages';
+    const sql = "SELECT * FROM packages";
 
     // Execute the SQL query
     db.query(sql, (err, results) => {
       if (err) {
         // Handle SQL query errors
-        console.error('Error fetching packages:', err);
-        return res.status(500).json({ message: 'Error retrieving users', error: err });
+        console.error("Error fetching packages:", err);
+        return res
+          .status(500)
+          .json({ message: "Error retrieving users", error: err });
       }
 
       // Send the results as JSON
@@ -962,8 +1126,8 @@ const getHeartsPackages = async (req, res) => {
     });
   } catch (error) {
     // Handle any other errors
-    console.error('Error processing request:', error);
-    res.status(500).json({ message: 'Error retrieving users', error });
+    console.error("Error processing request:", error);
+    res.status(500).json({ message: "Error retrieving users", error });
   }
 };
 
@@ -991,7 +1155,6 @@ const addHeartsPackage = async (req, res) => {
     res.status(500).json({ message: "Error processing request" });
   }
 };
-
 
 const updateHeartsPackage = async (req, res) => {
   const packageId = req.params.packageId;
@@ -1036,7 +1199,9 @@ const deleteHeartsPackage = async (req, res) => {
     db.query(deleteSql, [packageId], (err, result) => {
       if (err) {
         console.error(err);
-        return res.status(500).json({ message: "Error deleting Heart Package" });
+        return res
+          .status(500)
+          .json({ message: "Error deleting Heart Package" });
       }
 
       if (result.affectedRows === 0) {
@@ -1083,19 +1248,21 @@ const updateSelectedUserCoinBalance = async (req, res) => {
 };
 
 const getsubscriptionPlansForAdmin = async (req, res) => {
-  const sql = 'SELECT * FROM subscription_plans';
+  const sql = "SELECT * FROM subscription_plans";
 
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching subscription plans:', err);
-      return res.status(500).json({ message: 'Error fetching subscription plans' });
+      console.error("Error fetching subscription plans:", err);
+      return res
+        .status(500)
+        .json({ message: "Error fetching subscription plans" });
     }
 
     // Process the results to convert integer values and parse JSON
-    const processedResults = results.map(plan => ({
+    const processedResults = results.map((plan) => ({
       ...plan,
       discount: plan.discount === 1, // Convert integer to boolean
-      features: JSON.parse(plan.features) // Parse JSON string to object
+      features: JSON.parse(plan.features), // Parse JSON string to object
     }));
 
     res.status(200).json(processedResults);
@@ -1104,7 +1271,14 @@ const getsubscriptionPlansForAdmin = async (req, res) => {
 
 // Add a new subscription plan
 const addSubscriptionPlan = (req, res) => {
-  const { planName, price, discount, discountPercentage, discountShowValue, features } = req.body;
+  const {
+    planName,
+    price,
+    discount,
+    discountPercentage,
+    discountShowValue,
+    features,
+  } = req.body;
 
   // Convert boolean to integer for database storage
   const discountInt = discount ? 1 : 0;
@@ -1112,22 +1286,48 @@ const addSubscriptionPlan = (req, res) => {
   // Convert features object to JSON string
   const featuresJson = JSON.stringify(features);
 
-  const sql = 'INSERT INTO subscription_plans (plan_name, price, discount, discount_percentage, discount_show_value, features) VALUES (?, ?, ?, ?, ?, ?)';
+  const sql =
+    "INSERT INTO subscription_plans (plan_name, price, discount, discount_percentage, discount_show_value, features) VALUES (?, ?, ?, ?, ?, ?)";
 
-  db.query(sql, [planName, price, discountInt, discountPercentage, discountShowValue, featuresJson], (err, results) => {
-    if (err) {
-      console.error('Error adding subscription plan:', err);
-      return res.status(500).json({ message: 'Error adding subscription plan' });
+  db.query(
+    sql,
+    [
+      planName,
+      price,
+      discountInt,
+      discountPercentage,
+      discountShowValue,
+      featuresJson,
+    ],
+    (err, results) => {
+      if (err) {
+        console.error("Error adding subscription plan:", err);
+        return res
+          .status(500)
+          .json({ message: "Error adding subscription plan" });
+      }
+
+      res
+        .status(201)
+        .json({
+          message: "Subscription plan added successfully",
+          id: results.insertId,
+        });
     }
-
-    res.status(201).json({ message: 'Subscription plan added successfully', id: results.insertId });
-  });
+  );
 };
 
 // Update a subscription plan
 const updateSubscriptionPlan = (req, res) => {
   const { id } = req.params;
-  const { planName, price, discount, discountPercentage, discountShowValue, features } = req.body;
+  const {
+    planName,
+    price,
+    discount,
+    discountPercentage,
+    discountShowValue,
+    features,
+  } = req.body;
 
   // Convert boolean to integer for database storage
   const discountInt = discount ? 1 : 0;
@@ -1135,37 +1335,56 @@ const updateSubscriptionPlan = (req, res) => {
   // Convert features object to JSON string
   const featuresJson = JSON.stringify(features);
 
-  const sql = 'UPDATE subscription_plans SET plan_name = ?, price = ?, discount = ?, discount_percentage = ?, discount_show_value = ?, features = ? WHERE id = ?';
+  const sql =
+    "UPDATE subscription_plans SET plan_name = ?, price = ?, discount = ?, discount_percentage = ?, discount_show_value = ?, features = ? WHERE id = ?";
 
-  db.query(sql, [planName, price, discountInt, discountPercentage, discountShowValue, featuresJson, id], (err, results) => {
-    if (err) {
-      console.error('Error updating subscription plan:', err);
-      return res.status(500).json({ message: 'Error updating subscription plan' });
+  db.query(
+    sql,
+    [
+      planName,
+      price,
+      discountInt,
+      discountPercentage,
+      discountShowValue,
+      featuresJson,
+      id,
+    ],
+    (err, results) => {
+      if (err) {
+        console.error("Error updating subscription plan:", err);
+        return res
+          .status(500)
+          .json({ message: "Error updating subscription plan" });
+      }
+
+      res
+        .status(200)
+        .json({ message: "Subscription plan updated successfully" });
     }
-
-    res.status(200).json({ message: 'Subscription plan updated successfully' });
-  });
+  );
 };
 
 // Delete a subscription plan
 const deleteSubscriptionPlan = (req, res) => {
   const { id } = req.params;
 
-  const sql = 'DELETE FROM subscription_plans WHERE id = ?';
+  const sql = "DELETE FROM subscription_plans WHERE id = ?";
 
   db.query(sql, [id], (err, results) => {
     if (err) {
-      console.error('Error deleting subscription plan:', err);
-      return res.status(500).json({ message: 'Error deleting subscription plan' });
+      console.error("Error deleting subscription plan:", err);
+      return res
+        .status(500)
+        .json({ message: "Error deleting subscription plan" });
     }
 
-    res.status(200).json({ message: 'Subscription plan deleted successfully' });
+    res.status(200).json({ message: "Subscription plan deleted successfully" });
   });
 };
 
 module.exports = {
   addNewUserForAdmin,
-  getAllNewUsers ,
+  getAllNewUsers,
   deleteUserData,
   updateUser,
   updateUserStatus,
@@ -1179,5 +1398,5 @@ module.exports = {
   deleteSubscriptionPlan,
   updateSubscriptionPlan,
   addSubscriptionPlan,
-  updateUserBulkStatuses
+  updateUserBulkStatuses,
 };

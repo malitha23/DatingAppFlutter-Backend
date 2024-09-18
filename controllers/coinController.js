@@ -278,12 +278,13 @@ const updateKey = async (userId, newKey, formattedPhoneNumber) => {
 
   const updateQuery = `
     UPDATE users
-    SET generatedKey = ?
+    SET generatedKey = ?, status = ? 
     WHERE id = ?
   `;
 
   const updateValues = [
     newKey,
+    0,
     userId
   ];
 
