@@ -1545,7 +1545,7 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
       if (result.affectedRows === 0) {
           return res.status(404).json({ message: 'Payment record not found' });
       }
-
+console.log(result);
       return res.status(200).json({ message: 'Payment status updated successfully' });
   } catch (error) {
       console.error('Error updating payment status:', error);
