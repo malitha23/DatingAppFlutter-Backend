@@ -1531,7 +1531,6 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
               duration = ?,
               packageStartDate = ?,
               packageStartEnd = ?,
-              payment_date = ?,
               payment_status = ?,
               approved = ?
           WHERE id = ?`;
@@ -1542,7 +1541,6 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
           duration,
           formattedStartDate,
           formattedEndDate,
-          payment_date,
           status,
           approved,
           id
