@@ -1509,19 +1509,7 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
             const formattedStartDate = moment.tz(packageStartDate, inputTimeZone).tz(targetTimeZone).format('YYYY-MM-DD HH:mm:ss');
             const formattedEndDate = moment.tz(packageEndDate, inputTimeZone).tz(targetTimeZone).format('YYYY-MM-DD HH:mm:ss');
       
-            // Log the converted values
-            console.log('Converted packageStartDate:', formattedStartDate);
-            console.log('Converted packageEndDate:', formattedEndDate);
-            console.log('Updating with values:', [
-              price,
-              duration,
-              packageStartDate,
-              packageEndDate,
-              payment_date,
-              status,
-              approved,
-              id
-          ]);
+          
           
       // Prepare the SQL query
       const sql = `
@@ -1552,7 +1540,7 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
       if (result.affectedRows === 0) {
           return res.status(404).json({ message: 'Payment record not found' });
       }
-console.log(result);
+
       return res.status(200).json({ message: 'Payment status updated successfully' });
   } catch (error) {
       console.error('Error updating payment status:', error);
