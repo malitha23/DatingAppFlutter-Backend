@@ -1425,6 +1425,135 @@ const deleteSubscriptionPlan = (req, res) => {
   });
 };
 
+const getPendingPackagespayments = async (req, res) => {
+  const query = `
+    SELECT p.*, r.firstName, r.lastName, r.whatsAppNumber
+    FROM packagesbuydata p
+    LEFT JOIN register_user_portfolio_data r ON p.userId = r.userId
+    WHERE p.payment_status = 0 AND p.approved = 0
+    ORDER BY p.created_at DESC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching pending packages:', err);
+      return res.status(500).json({ message: 'Database error', error: err });
+    }
+
+    // Send the results back to the client
+    res.status(200).json({ message: 'Pending packages fetched successfully', data: results });
+  });
+};
+
+// Define the async function for handling pending package payments
+const getSubcriptionPackagesForPendingPackagesPayments = async (req, res) => {
+  try {
+      const { plan_name } = req.body; // Read from req.body instead of req.query
+
+      if (!plan_name) {
+          return res.status(400).json({ error: 'Missing body parameter: plan_name' });
+      }
+
+      // Sanitize input to prevent SQL injection
+      const query = 'SELECT * FROM subscription_plans WHERE plan_name LIKE ?';
+      const values = [`%${plan_name}%`];
+
+      // Promisify the query to use async/await
+      const queryAsync = (query, values) => {
+          return new Promise((resolve, reject) => {
+              db.query(query, values, (err, results) => {
+                  if (err) {
+                      return reject(err);
+                  }
+                  resolve(results);
+              });
+          });
+      };
+
+      // Execute the query
+      const results = await queryAsync(query, values);
+      res.json(results);
+  } catch (error) {
+      console.error('Query error:', error);
+      res.status(500).json({ error: 'Database query error' });
+  }
+};
+
+const approveOrRejectPendingPackagesPayments = async (req, res) => {
+  const {
+      id,
+      userId,
+      status,
+      price,
+      duration,
+      packageStartDate,
+      packageEndDate,
+      payment_date,
+      approved
+  } = req.body;
+
+  try {
+      // Validate required fields
+      if (!userId || !id) {
+          return res.status(400).json({ message: 'User ID and ID are required' });
+      }
+
+            // Log the original input values
+            console.log('Original packageStartDate:', packageStartDate);
+            console.log('Original packageEndDate:', packageEndDate);
+      
+            // Assume the incoming dates are in UTC; change this if the input is in a different time zone
+            const inputTimeZone = 'UTC'; // Replace 'UTC' if the input dates are in a different time zone
+            const targetTimeZone = 'Asia/Colombo'; // Set your desired time zone for storage
+      
+            // Convert packageStartDate and packageEndDate to the target time zone
+            const formattedStartDate = moment.tz(packageStartDate, inputTimeZone).tz(targetTimeZone).format('YYYY-MM-DD HH:mm:ss');
+            const formattedEndDate = moment.tz(packageEndDate, inputTimeZone).tz(targetTimeZone).format('YYYY-MM-DD HH:mm:ss');
+      
+            // Log the converted values
+            console.log('Converted packageStartDate:', formattedStartDate);
+            console.log('Converted packageEndDate:', formattedEndDate);
+
+      // Prepare the SQL query
+      const sql = `
+          UPDATE packagesbuydata
+          SET 
+              price = ?,
+              duration = ?,
+              packageStartDate = ?,
+              packageStartEnd = ?,
+              payment_date = ?,
+              payment_status = ?,
+              approved = ?
+          WHERE id = ?`;
+
+      // Execute the query with the provided parameters
+      const result = await db.query(sql, [
+          price,
+          duration,
+          formattedStartDate,
+          formattedEndDate,
+          payment_date,
+          status,
+          approved,
+          id
+      ]);
+
+
+
+      // If using mysql2, access affectedRows directly
+      if (result.affectedRows === 0) {
+          return res.status(404).json({ message: 'Payment record not found' });
+      }
+
+      return res.status(200).json({ message: 'Payment status updated successfully' });
+  } catch (error) {
+      console.error('Error updating payment status:', error);
+      return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
 module.exports = {
   addNewUserForAdmin,
   getAllNewUsers,
@@ -1442,4 +1571,7 @@ module.exports = {
   updateSubscriptionPlan,
   addSubscriptionPlan,
   updateUserBulkStatuses,
+  getPendingPackagespayments,
+  getSubcriptionPackagesForPendingPackagesPayments,
+  approveOrRejectPendingPackagesPayments
 };

@@ -8,6 +8,31 @@ const UserController = require("../controllers/UserController.js");
 router.use(adminMiddleware);
 
 // Admin routes
+router.get("/pending-packages-payments", async (req, res, next) => {
+    try {
+        await adminController.getPendingPackagespayments (req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
+router.post("/getSubcriptionPackagesForPendingPackagesPayments", async (req, res, next) => {
+    try {
+        await adminController.getSubcriptionPackagesForPendingPackagesPayments (req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
+router.post("/approveOrrejectPendingPackagesPayments", async (req, res, next) => {
+    try {
+        await adminController.approveOrRejectPendingPackagesPayments (req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
+// Admin routes
 router.get("/getAllNewUsers", async (req, res, next) => {
     try {
         await adminController.getAllNewUsers (req, res);
