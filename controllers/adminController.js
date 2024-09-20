@@ -1499,8 +1499,7 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
       }
 
             // Log the original input values
-            console.log('Original packageStartDate:', packageStartDate);
-            console.log('Original packageEndDate:', packageEndDate);
+
       
             // Assume the incoming dates are in UTC; change this if the input is in a different time zone
             const inputTimeZone = 'UTC'; // Replace 'UTC' if the input dates are in a different time zone
@@ -1513,7 +1512,17 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
             // Log the converted values
             console.log('Converted packageStartDate:', formattedStartDate);
             console.log('Converted packageEndDate:', formattedEndDate);
-
+            console.log('Updating with values:', [
+              price,
+              duration,
+              packageStartDate,
+              packageEndDate,
+              payment_date,
+              status,
+              approved,
+              id
+          ]);
+          
       // Prepare the SQL query
       const sql = `
           UPDATE packagesbuydata
