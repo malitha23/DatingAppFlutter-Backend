@@ -5,3 +5,4 @@ uploadsUpdateApks/
 /public/adminsite/node_modules/
 .wwebjs_auth/
 .wwebjs_cache/
+services/wwebjs_auth/
