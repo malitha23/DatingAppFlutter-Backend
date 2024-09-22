@@ -86,13 +86,14 @@ const getQrCode = () => {
 
 // Function to check if the client is ready
 const isClientReady = () => {
-  return client && client.info && client.info.wid;
+  return connected && isAuthenticated && client && client.info && client.info.wid;
 };
 
 // Function to check if the client is authenticated
 const isClientAuthenticated = () => {
   return isAuthenticated;
 };
+
 
 // Function to handle client reinitialization
 const handleClientReinitialization = async () => {
@@ -112,6 +113,7 @@ const handleClientReinitialization = async () => {
 // Function to reset the client
 const resetClient = async () => {
   qrCode = null; // Clear the existing QR code
+  isAuthenticated = false; // Reset authentication state
   try {
     await client.destroy(); // Destroy the current instance
     console.log('Client destroyed. Reinitializing...');
