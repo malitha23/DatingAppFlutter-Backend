@@ -89,7 +89,7 @@ const getQrCode = () => {
 
 // Function to check if the client is ready
 const isClientReady = () => {
-  return connected && isAuthenticated && client && client.info && client.info.wid;
+  return isAuthenticated && client && client.info && client.info.wid;
 };
 
 // Function to check if the client is authenticated
