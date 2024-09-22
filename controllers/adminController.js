@@ -7,6 +7,12 @@ const { verifyToken, getUserData } = require("./UserController");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const {
+  client,
+  getQrCode,
+  isClientReady,
+  isClientAuthenticated,
+} = require("../services/whatsappClient"); // Adjust path if necessary
 
 // Set up multer for image uploads
 const storage = multer.diskStorage({
@@ -1436,118 +1442,198 @@ const getPendingPackagespayments = async (req, res) => {
 
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching pending packages:', err);
-      return res.status(500).json({ message: 'Database error', error: err });
+      console.error("Error fetching pending packages:", err);
+      return res.status(500).json({ message: "Database error", error: err });
     }
 
     // Send the results back to the client
-    res.status(200).json({ message: 'Pending packages fetched successfully', data: results });
+    res.status(200).json({
+      message: "Pending packages fetched successfully",
+      data: results,
+    });
   });
 };
 
 // Define the async function for handling pending package payments
 const getSubcriptionPackagesForPendingPackagesPayments = async (req, res) => {
   try {
-      const { plan_name } = req.body; // Read from req.body instead of req.query
+    const { plan_name } = req.body; // Read from req.body instead of req.query
 
-      if (!plan_name) {
-          return res.status(400).json({ error: 'Missing body parameter: plan_name' });
-      }
+    if (!plan_name) {
+      return res
+        .status(400)
+        .json({ error: "Missing body parameter: plan_name" });
+    }
 
-      // Sanitize input to prevent SQL injection
-      const query = 'SELECT * FROM subscription_plans WHERE plan_name LIKE ?';
-      const values = [`%${plan_name}%`];
+    // Sanitize input to prevent SQL injection
+    const query = "SELECT * FROM subscription_plans WHERE plan_name LIKE ?";
+    const values = [`%${plan_name}%`];
 
-      // Promisify the query to use async/await
-      const queryAsync = (query, values) => {
-          return new Promise((resolve, reject) => {
-              db.query(query, values, (err, results) => {
-                  if (err) {
-                      return reject(err);
-                  }
-                  resolve(results);
-              });
-          });
-      };
+    // Promisify the query to use async/await
+    const queryAsync = (query, values) => {
+      return new Promise((resolve, reject) => {
+        db.query(query, values, (err, results) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve(results);
+        });
+      });
+    };
 
-      // Execute the query
-      const results = await queryAsync(query, values);
-      res.json(results);
+    // Execute the query
+    const results = await queryAsync(query, values);
+    res.json(results);
   } catch (error) {
-      console.error('Query error:', error);
-      res.status(500).json({ error: 'Database query error' });
+    console.error("Query error:", error);
+    res.status(500).json({ error: "Database query error" });
   }
 };
 
 const approveOrRejectPendingPackagesPayments = async (req, res) => {
   const {
-      id,
-      userId,
-      status,
-      price,
-      duration,
-      packageStartDate,
-      packageEndDate,
-      payment_date,
-      approved
+    id,
+    userId,
+    firstName,
+    status,
+    price,
+    duration,
+    packageStartDate,
+    packageEndDate,
+    payment_date,
+    approved,
+    whatsAppNumber,
+    discountApplied,
+    plan_name,
+    packagePrice,
+    payment_method,
   } = req.body;
 
   try {
-      // Validate required fields
-      if (!userId || !id) {
-          return res.status(400).json({ message: 'User ID and ID are required' });
-      }
+    // Validate required fields
+    if (!userId || !id || !whatsAppNumber) {
+      return res
+        .status(400)
+        .json({ message: "User ID, ID, and WhatsApp number are required" });
+    }
 
-            // Log the original input values
+    // Format WhatsApp number
+    const formattedWhatsAppNumber = `94${whatsAppNumber.slice(1)}`; // Remove the leading 0 and add country code
+    const userFirstName = firstName || "User"; // Default to "User" if null
 
-      
-            // Assume the incoming dates are in UTC; change this if the input is in a different time zone
-            const inputTimeZone = 'UTC'; // Replace 'UTC' if the input dates are in a different time zone
-            const targetTimeZone = 'Asia/Colombo'; // Set your desired time zone for storage
-      
-            // Convert packageStartDate and packageEndDate to the target time zone
-            const formattedStartDate = moment.tz(packageStartDate, inputTimeZone).tz(targetTimeZone).format('YYYY-MM-DD HH:mm:ss');
-            const formattedEndDate = moment.tz(packageEndDate, inputTimeZone).tz(targetTimeZone).format('YYYY-MM-DD HH:mm:ss');
-      
-          
-          
-      // Prepare the SQL query
-      const sql = `
-          UPDATE packagesbuydata
-          SET 
-              price = ?,
-              duration = ?,
-              packageStartDate = ?,
-              packageStartEnd = ?,
-              payment_status = ?,
-              approved = ?
-          WHERE id = ?`;
+    // Convert dates to the desired time zone
+    const inputTimeZone = "UTC";
+    const targetTimeZone = "Asia/Colombo";
+    const formattedStartDate = moment
+      .tz(packageStartDate, inputTimeZone)
+      .tz(targetTimeZone)
+      .format("YYYY-MM-DD HH:mm:ss");
+    const formattedEndDate = moment
+      .tz(packageEndDate, inputTimeZone)
+      .tz(targetTimeZone)
+      .format("YYYY-MM-DD HH:mm:ss");
 
-      // Execute the query with the provided parameters
-      const result = await db.query(sql, [
-          price,
-          duration,
-          formattedStartDate,
-          formattedEndDate,
-          status,
-          approved,
-          id
+    // Prepare the SQL query for updating payment status
+    const sql = `
+      UPDATE packagesbuydata
+      SET 
+          price = ?,
+          duration = ?,
+          packageStartDate = ?,
+          packageStartEnd = ?,
+          payment_status = ?,
+          approved = ?
+      WHERE id = ?`;
+
+    // Execute the query
+    const result = await db.query(sql, [
+      price,
+      duration,
+      formattedStartDate,
+      formattedEndDate,
+      status,
+      approved,
+      id,
+    ]);
+
+    // Check if the record was found
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Payment record not found" });
+    }
+
+    // Construct suitable message content
+    const planName = plan_name;
+    const discountMessage = discountApplied
+      ? "with discount applied"
+      : "without discount";
+
+    const messageContent =
+      status == 1
+        ? `Dear ${userFirstName},\n\nYour payment of LKR ${price} for the ${planName} plan made on ${moment(
+            payment_date
+          ).format(
+            "YYYY-MM-DD"
+          )} via ${payment_method} has been approved. Enjoy your package starting from ${moment(
+            formattedStartDate
+          ).format("YYYY-MM-DD")} to ${moment(formattedEndDate).format(
+            "YYYY-MM-DD"
+          )}. Price per month: LKR ${packagePrice} ${discountMessage}.\n\nThank you for choosing us!`
+        : `Dear ${userFirstName},\n\nYour payment of LKR ${price} for the ${planName} plan made on ${moment(
+            payment_date
+          ).format(
+            "YYYY-MM-DD"
+          )} via ${payment_method} has been rejected. Please contact support for further assistance.\n\nThank you!`;
+
+    // Check if the WhatsApp account is valid
+    const numberDetails = await client.getNumberId(formattedWhatsAppNumber);
+
+    if (!numberDetails) {
+      // Store the message attempt in the database since the WhatsApp account is not set
+      const insertSql = `
+  INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+  VALUES (?, ?, ?, ?)`;
+
+      await db.query(insertSql, [
+        userId,
+        formattedWhatsAppNumber,
+        messageContent,
+        "noWhatsAppaccount", // or another relevant reason
       ]);
 
+      return res.status(200).json({
+        message:
+          "Payment status updated successfully, but WhatsApp account is not valid. Message stored for future reference.",
+      });
+    }
 
+    try {
+      await client.sendMessage(
+        `${formattedWhatsAppNumber}@c.us`,
+        messageContent
+      );
+    } catch (sendError) {
+      console.error("Error sending WhatsApp message:", sendError);
 
-      // If using mysql2, access affectedRows directly
-      if (result.affectedRows === 0) {
-          return res.status(404).json({ message: 'Payment record not found' });
-      }
+      const insertSql = `
+      INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+      VALUES (?, ?, ?, ?)`;
+    
+          await db.query(insertSql, [
+            userId,
+            formattedWhatsAppNumber,
+            messageContent,
+            "otherError", // or another relevant reason
+          ]);
+    }
 
-      return res.status(200).json({ message: 'Payment status updated successfully' });
+    return res.status(200).json({
+      message: "Payment status updated successfully",
+    });
   } catch (error) {
-      console.error('Error updating payment status:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+    console.error("Error updating payment status:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 module.exports = {
   addNewUserForAdmin,
@@ -1568,5 +1654,5 @@ module.exports = {
   updateUserBulkStatuses,
   getPendingPackagespayments,
   getSubcriptionPackagesForPendingPackagesPayments,
-  approveOrRejectPendingPackagesPayments
+  approveOrRejectPendingPackagesPayments,
 };

@@ -28,6 +28,7 @@ const authRouteAdmin= require("./routes/admin");
 const authRouteForgetpassword = require("./routes/forgetpassword");
 const authRouteForapkUpdate = require("./routes/apkUpdate");
 const authRouteSubscriptionPlans = require("./routes/subscriptionPlans");
+const authRouteWhatsappMessageSend = require("./routes/WhatsappMessageSend");
 const { pusher, sendHartingNotification, subscribeToChannel } = require('./services/pusherService'); // Import the pusher instance and function
 
 app.get('/', (req, res) => {
@@ -43,6 +44,7 @@ app.use("/api/apkUpdate", authRouteForapkUpdate);
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use("/api/forgetpassword", authRouteForgetpassword);
 app.use("/api/subscriptionPlans", authRouteSubscriptionPlans);
+app.use('/api/send-message-whatsapp', authRouteWhatsappMessageSend);
 
 
 // Pusher authentication endpoint
