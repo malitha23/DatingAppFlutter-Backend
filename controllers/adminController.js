@@ -1810,64 +1810,34 @@ const approveOrRejectPendingHeartsPackagesPayments = async (req, res) => {
     // Update coin balance only if approved
     if (approved === 1) {
       const currentBalanceSql = `
-  SELECT coin_balance 
-  FROM coin_balance 
-  WHERE userId = ?`;
+        SELECT coin_balance 
+        FROM coin_balance 
+        WHERE userId = ?`;
 
-      db.query(currentBalanceSql, [userId], (err, results) => {
-        if (err) {
-          console.error("Error fetching coin balance:", err);
-          return res
-            .status(500)
-            .json({ message: "Error fetching coin balance" });
-        }
+      const balanceResults = await db.query(currentBalanceSql, [userId]);
 
-        if (results.length === 0) {
-          return res.status(404).json({ message: "User not found" });
-        }
+      if (balanceResults.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
 
-        const currentBalance = results[0].coin_balance;
+      const currentBalance = balanceResults[0].coin_balance;
 
-        // Calculate the new balance
-        const newBalance = currentBalance + packageaccordingHearts;
+      // Calculate the new balance
+      const newBalance = currentBalance + packageaccordingHearts;
 
-        const coinBalanceUpdateSql = `
-    UPDATE coin_balance 
-    SET coin_balance = ? 
-    WHERE userId = ?`;
+      const coinBalanceUpdateSql = `
+        UPDATE coin_balance 
+        SET coin_balance = ? 
+        WHERE userId = ?`;
 
-        db.query(
-          coinBalanceUpdateSql,
-          [newBalance, userId],
-          (updateErr, updateResults) => {
-            if (updateErr) {
-              console.error("Error updating coin balance:", updateErr);
-              return res
-                .status(500)
-                .json({ message: "Error updating coin balance" });
-            }
-
-            return res
-              .status(200)
-              .json({ message: "Coin balance updated successfully" });
-          }
-        );
-      });
+      await db.query(coinBalanceUpdateSql, [newBalance, userId]);
     }
 
     // Construct message content
     const messageContent =
       approved === 1
-        ? `Dear ${userFirstName},\n\nYour hearts package payment of Rs.${price} made on ${moment(
-            payment_date
-          ).format(
-            "YYYY-MM-DD"
-          )} via ${payment_method} has been approved. You have added ${packageaccordingHearts} hearts. Enjoy!\n\nThanks!`
-        : `Dear ${userFirstName},\n\nYour hearts package payment of Rs.${price} made on ${moment(
-            payment_date
-          ).format(
-            "YYYY-MM-DD"
-          )} via ${payment_method} has been rejected. Please contact support for further assistance.\n\nThank you for your understanding.`;
+        ? `Dear ${userFirstName},\n\nYour hearts package payment of Rs.${price} made on ${moment(payment_date).format("YYYY-MM-DD")} via ${payment_method} has been approved. You have added ${packageaccordingHearts} hearts. Enjoy!\n\nThanks!`
+        : `Dear ${userFirstName},\n\nYour hearts package payment of Rs.${price} made on ${moment(payment_date).format("YYYY-MM-DD")} via ${payment_method} has been rejected. Please contact support for further assistance.\n\nThank you for your understanding.`;
 
     // Validate WhatsApp account
     const formattedWhatsAppNumber = `94${whatsAppNumber.slice(1)}`;
@@ -1876,26 +1846,22 @@ const approveOrRejectPendingHeartsPackagesPayments = async (req, res) => {
     if (!numberDetails) {
       await db.query(
         `
-          INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
-          VALUES (?, ?, ?, ?)`,
+        INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+        VALUES (?, ?, ?, ?)`,
         [userId, formattedWhatsAppNumber, messageContent, "noWhatsAppaccount"]
       );
       return res.status(200).json({
-        message:
-          "Hearts Package Payment status updated successfully, but WhatsApp account is not valid. Message stored for future reference.",
+        message: "Hearts Package Payment status updated successfully, but WhatsApp account is not valid. Message stored for future reference.",
       });
     }
 
     try {
-      await client.sendMessage(
-        `${formattedWhatsAppNumber}@c.us`,
-        messageContent
-      );
+      await client.sendMessage(`${formattedWhatsAppNumber}@c.us`, messageContent);
     } catch (sendError) {
       await db.query(
         `
-          INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
-          VALUES (?, ?, ?, ?)`,
+        INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+        VALUES (?, ?, ?, ?)`,
         [userId, formattedWhatsAppNumber, messageContent, "otherError"]
       );
     }
@@ -1908,6 +1874,153 @@ const approveOrRejectPendingHeartsPackagesPayments = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+// const approveOrRejectPendingHeartsPackagesPayments = async (req, res) => {
+//   const {
+//     id,
+//     userId,
+//     firstName,
+//     lastName,
+//     price,
+//     payment_date,
+//     payment_method,
+//     approved,
+//     whatsAppNumber,
+//     packageaccordingHearts,
+//     packagePrice,
+//     packageHearts,
+//   } = req.body;
+
+//   try {
+//     // Validate required fields
+//     if (!userId || !id) {
+//       return res.status(400).json({ message: "User ID and ID are required" });
+//     }
+
+//     const userFirstName = firstName || "User";
+
+//     // Prepare the SQL query for updating payment status
+//     const sql = `
+//       UPDATE heartsbuydata 
+//       SET 
+//           hearts = ?, 
+//           total_price = ?, 
+//           approved = ? 
+//       WHERE id = ?`;
+
+//     const result = await db.query(sql, [
+//       packageaccordingHearts,
+//       price,
+//       approved,
+//       id,
+//     ]);
+
+//     if (result.affectedRows === 0) {
+//       return res.status(404).json({ message: "Payment record not found" });
+//     }
+
+//     // Update coin balance only if approved
+//     if (approved === 1) {
+//       const currentBalanceSql = `
+//   SELECT coin_balance 
+//   FROM coin_balance 
+//   WHERE userId = ?`;
+
+//       db.query(currentBalanceSql, [userId], (err, results) => {
+//         if (err) {
+//           console.error("Error fetching coin balance:", err);
+//           return res
+//             .status(500)
+//             .json({ message: "Error fetching coin balance" });
+//         }
+
+//         if (results.length === 0) {
+//           return res.status(404).json({ message: "User not found" });
+//         }
+
+//         const currentBalance = results[0].coin_balance;
+
+//         // Calculate the new balance
+//         const newBalance = currentBalance + packageaccordingHearts;
+
+//         const coinBalanceUpdateSql = `
+//     UPDATE coin_balance 
+//     SET coin_balance = ? 
+//     WHERE userId = ?`;
+
+//         db.query(
+//           coinBalanceUpdateSql,
+//           [newBalance, userId],
+//           (updateErr, updateResults) => {
+//             if (updateErr) {
+//               console.error("Error updating coin balance:", updateErr);
+//               return res
+//                 .status(500)
+//                 .json({ message: "Error updating coin balance" });
+//             }
+
+//             return res
+//               .status(200)
+//               .json({ message: "Coin balance updated successfully" });
+//           }
+//         );
+//       });
+//     }
+
+//     // Construct message content
+//     const messageContent =
+//       approved === 1
+//         ? `Dear ${userFirstName},\n\nYour hearts package payment of Rs.${price} made on ${moment(
+//             payment_date
+//           ).format(
+//             "YYYY-MM-DD"
+//           )} via ${payment_method} has been approved. You have added ${packageaccordingHearts} hearts. Enjoy!\n\nThanks!`
+//         : `Dear ${userFirstName},\n\nYour hearts package payment of Rs.${price} made on ${moment(
+//             payment_date
+//           ).format(
+//             "YYYY-MM-DD"
+//           )} via ${payment_method} has been rejected. Please contact support for further assistance.\n\nThank you for your understanding.`;
+
+//     // Validate WhatsApp account
+//     const formattedWhatsAppNumber = `94${whatsAppNumber.slice(1)}`;
+//     const numberDetails = await client.getNumberId(formattedWhatsAppNumber);
+
+//     if (!numberDetails) {
+//       await db.query(
+//         `
+//           INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+//           VALUES (?, ?, ?, ?)`,
+//         [userId, formattedWhatsAppNumber, messageContent, "noWhatsAppaccount"]
+//       );
+//       return res.status(200).json({
+//         message:
+//           "Hearts Package Payment status updated successfully, but WhatsApp account is not valid. Message stored for future reference.",
+//       });
+//     }
+
+//     try {
+//       await client.sendMessage(
+//         `${formattedWhatsAppNumber}@c.us`,
+//         messageContent
+//       );
+//     } catch (sendError) {
+//       await db.query(
+//         `
+//           INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+//           VALUES (?, ?, ?, ?)`,
+//         [userId, formattedWhatsAppNumber, messageContent, "otherError"]
+//       );
+//     }
+
+//     return res.status(200).json({
+//       message: "Hearts Package Payment status updated successfully",
+//     });
+//   } catch (error) {
+//     console.error("Error updating hearts package payment status:", error);
+//     return res.status(500).json({ message: "Internal server error" });
+//   }
+// };
 
 module.exports = {
   addNewUserForAdmin,
