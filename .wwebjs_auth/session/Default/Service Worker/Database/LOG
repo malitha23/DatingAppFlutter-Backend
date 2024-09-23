@@ -1,3 +1,5 @@
-2024/09/24-02:14:27.147 10e0 Reusing MANIFEST F:\github\love-birds-backend\.wwebjs_auth\session\Default\Service Worker\Database/MANIFEST-000001
-2024/09/24-02:14:27.148 10e0 Recovering log #3
-2024/09/24-02:14:27.149 10e0 Reusing old log F:\github\love-birds-backend\.wwebjs_auth\session\Default\Service Worker\Database/000003.log 
+2024/09/24-00:03:48.023 1f218 Recovering log #8
+2024/09/24-00:03:48.023 1f218 Level-0 table #10: started
+2024/09/24-00:03:48.025 1f218 Level-0 table #10: 705 bytes OK
+2024/09/24-00:03:48.027 1f218 Delete type=3 #7
+2024/09/24-00:03:48.027 1f218 Delete type=0 #8
