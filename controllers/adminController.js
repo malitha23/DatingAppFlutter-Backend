@@ -995,6 +995,7 @@ const updateUserStatus = async (req, res) => {
         if (results.affectedRows === 0) {
           return res.status(404).json({ message: "User not found" });
         }
+        sendWhatsAppMessagenewregisterApproveOrReject(userId, status);
         return res
           .status(200)
           .json({ message: "User status updated successfully" });
@@ -1012,6 +1013,7 @@ const updateUserStatus = async (req, res) => {
       if (results.affectedRows === 0) {
         return res.status(404).json({ message: "User not found" });
       }
+      sendWhatsAppMessagenewregisterApproveOrReject(userId, status);
       return res
         .status(200)
         .json({ message: "User status updated successfully" });
@@ -1020,6 +1022,66 @@ const updateUserStatus = async (req, res) => {
 };
 
 // Function to handle bulk user status updates
+const sendWhatsAppMessagenewregisterApproveOrReject = (userId, status) => {
+  const getUserInfoQuery = `
+    SELECT firstName, whatsAppNumber 
+    FROM register_user_portfolio_data 
+    WHERE userId = ?`;
+
+  db.query(getUserInfoQuery, [userId], async (err, results) => {
+    if (err) {
+      console.error("Error fetching user info:", err);
+      return;
+    }
+
+    if (results.length === 0) {
+      console.log("User not found.");
+      return;
+    }
+
+    const { firstName, whatsAppNumber } = results[0];
+    if (!whatsAppNumber) {
+      console.log("WhatsApp number is not available.");
+      return;
+    }
+
+    const formattedWhatsAppNumber = `94${whatsAppNumber.slice(1)}`; // Format WhatsApp number
+
+    // Check if the WhatsApp number is valid
+    const numberDetails = await client.getNumberId(formattedWhatsAppNumber);
+
+    if (!numberDetails) {
+      console.log("This number is not registered on WhatsApp.");
+      await db.query(
+        `
+        INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+        VALUES (?, ?, ?, ?)`,
+        [userId, formattedWhatsAppNumber, `Welcome message not sent.`, "noWhatsAppaccount"]
+      );
+      return;
+    }
+
+    const messageContent =
+      status == 1
+        ? `Dear ${firstName || "User"}, welcome to Lovebirds platform! Your account has been approved successfully. Enjoy!\n\nThanks!`
+        : `Dear ${firstName || "User"}, your account has been rejected. Please contact support for further assistance.`;
+
+    client.sendMessage(`${formattedWhatsAppNumber}@c.us`, messageContent)
+      .then(() => {
+        console.log("WhatsApp message sent successfully.");
+      })
+      .catch(async (error) => {
+        console.error("Error sending WhatsApp message:", error);
+        await db.query(
+          `
+          INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+          VALUES (?, ?, ?, ?)`,
+          [userId, formattedWhatsAppNumber, messageContent, "otherError"]
+        );
+      });
+  });
+};
+
 // Function to update user statuses in bulk
 const updateUserBulkStatuses = async (req, res) => {
   const { users } = req.body;
@@ -1090,6 +1152,7 @@ const updateUserBulkStatuses = async (req, res) => {
       await new Promise((resolve, reject) => {
         db.query(updateQuery, values, (err, results) => {
           if (err) return reject(err);
+          sendWhatsAppMessagenewregisterApproveOrReject(userId, status);
           resolve(results);
         });
       });
@@ -1511,10 +1574,8 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
 
   try {
     // Validate required fields
-    if (!userId || !id || !whatsAppNumber) {
-      return res
-        .status(400)
-        .json({ message: "User ID, ID, and WhatsApp number are required" });
+    if (!userId || !id) {
+      return res.status(400).json({ message: "User ID, ID are required" });
     }
 
     // Format WhatsApp number
@@ -1617,13 +1678,13 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
       const insertSql = `
       INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
       VALUES (?, ?, ?, ?)`;
-    
-          await db.query(insertSql, [
-            userId,
-            formattedWhatsAppNumber,
-            messageContent,
-            "otherError", // or another relevant reason
-          ]);
+
+      await db.query(insertSql, [
+        userId,
+        formattedWhatsAppNumber,
+        messageContent,
+        "otherError", // or another relevant reason
+      ]);
     }
 
     return res.status(200).json({
@@ -1631,6 +1692,219 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating payment status:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const getHeartsPackagesPendingPayments = async (req, res) => {
+  try {
+    // Query to select all records from heartsbuydata where approved is 0
+    const sql = `
+      SELECT p.*, r.firstName, r.lastName, r.whatsAppNumber
+      FROM heartsbuydata p
+      LEFT JOIN register_user_portfolio_data r ON p.userId = r.userId
+      WHERE p.approved = 0
+      ORDER BY p.created_at DESC
+    `;
+
+    // Execute the SQL query
+    db.query(sql, (err, results) => {
+      if (err) {
+        // Handle SQL query errors
+        console.error("Error fetching data:", err);
+        return res
+          .status(500)
+          .json({ message: "Error retrieving data", error: err });
+      }
+
+      // Send the results as JSON
+      res.status(200).json(results);
+    });
+  } catch (error) {
+    // Handle any other errors
+    console.error("Error processing request:", error);
+    res.status(500).json({ message: "Error retrieving data", error });
+  }
+};
+
+// Define the async function for handling pending package payments
+const getHearsPackagesForPendingPackagesPayments = async (req, res) => {
+  try {
+    const { hearts_count } = req.body; // Read from req.body instead of req.query
+
+    if (!hearts_count) {
+      return res
+        .status(400)
+        .json({ error: "Missing body parameter: hearts_count" });
+    }
+
+    // Sanitize input to prevent SQL injection
+    const query = "SELECT * FROM packages WHERE heart LIKE ?";
+    const values = [`%${hearts_count}%`];
+
+    // Promisify the query to use async/await
+    const queryAsync = (query, values) => {
+      return new Promise((resolve, reject) => {
+        db.query(query, values, (err, results) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve(results);
+        });
+      });
+    };
+
+    // Execute the query
+    const results = await queryAsync(query, values);
+    res.json(results);
+  } catch (error) {
+    console.error("Query error:", error);
+    res.status(500).json({ error: "Database query error" });
+  }
+};
+
+const approveOrRejectPendingHeartsPackagesPayments = async (req, res) => {
+  const {
+    id,
+    userId,
+    firstName,
+    lastName,
+    price,
+    payment_date,
+    payment_method,
+    approved,
+    whatsAppNumber,
+    packageaccordingHearts,
+    packagePrice,
+    packageHearts,
+  } = req.body;
+
+  try {
+    // Validate required fields
+    if (!userId || !id) {
+      return res.status(400).json({ message: "User ID and ID are required" });
+    }
+
+    const userFirstName = firstName || "User";
+
+    // Prepare the SQL query for updating payment status
+    const sql = `
+      UPDATE heartsbuydata 
+      SET 
+          hearts = ?, 
+          total_price = ?, 
+          approved = ? 
+      WHERE id = ?`;
+
+    const result = await db.query(sql, [
+      packageaccordingHearts,
+      price,
+      approved,
+      id,
+    ]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Payment record not found" });
+    }
+
+    // Update coin balance only if approved
+    if (approved === 1) {
+      const currentBalanceSql = `
+  SELECT coin_balance 
+  FROM coin_balance 
+  WHERE userId = ?`;
+
+      db.query(currentBalanceSql, [userId], (err, results) => {
+        if (err) {
+          console.error("Error fetching coin balance:", err);
+          return res
+            .status(500)
+            .json({ message: "Error fetching coin balance" });
+        }
+
+        if (results.length === 0) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        const currentBalance = results[0].coin_balance;
+
+        // Calculate the new balance
+        const newBalance = currentBalance + packageaccordingHearts;
+
+        const coinBalanceUpdateSql = `
+    UPDATE coin_balance 
+    SET coin_balance = ? 
+    WHERE userId = ?`;
+
+        db.query(
+          coinBalanceUpdateSql,
+          [newBalance, userId],
+          (updateErr, updateResults) => {
+            if (updateErr) {
+              console.error("Error updating coin balance:", updateErr);
+              return res
+                .status(500)
+                .json({ message: "Error updating coin balance" });
+            }
+
+            return res
+              .status(200)
+              .json({ message: "Coin balance updated successfully" });
+          }
+        );
+      });
+    }
+
+    // Construct message content
+    const messageContent =
+      approved === 1
+        ? `Dear ${userFirstName},\n\nYour hearts package payment of Rs.${price} made on ${moment(
+            payment_date
+          ).format(
+            "YYYY-MM-DD"
+          )} via ${payment_method} has been approved. You have added ${packageaccordingHearts} hearts. Enjoy!\n\nThanks!`
+        : `Dear ${userFirstName},\n\nYour hearts package payment of Rs.${price} made on ${moment(
+            payment_date
+          ).format(
+            "YYYY-MM-DD"
+          )} via ${payment_method} has been rejected. Please contact support for further assistance.\n\nThank you for your understanding.`;
+
+    // Validate WhatsApp account
+    const formattedWhatsAppNumber = `94${whatsAppNumber.slice(1)}`;
+    const numberDetails = await client.getNumberId(formattedWhatsAppNumber);
+
+    if (!numberDetails) {
+      await db.query(
+        `
+          INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+          VALUES (?, ?, ?, ?)`,
+        [userId, formattedWhatsAppNumber, messageContent, "noWhatsAppaccount"]
+      );
+      return res.status(200).json({
+        message:
+          "Hearts Package Payment status updated successfully, but WhatsApp account is not valid. Message stored for future reference.",
+      });
+    }
+
+    try {
+      await client.sendMessage(
+        `${formattedWhatsAppNumber}@c.us`,
+        messageContent
+      );
+    } catch (sendError) {
+      await db.query(
+        `
+          INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
+          VALUES (?, ?, ?, ?)`,
+        [userId, formattedWhatsAppNumber, messageContent, "otherError"]
+      );
+    }
+
+    return res.status(200).json({
+      message: "Hearts Package Payment status updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating hearts package payment status:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -1655,4 +1929,8 @@ module.exports = {
   getPendingPackagespayments,
   getSubcriptionPackagesForPendingPackagesPayments,
   approveOrRejectPendingPackagesPayments,
+  getHeartsPackagesPendingPayments,
+  getHearsPackagesForPendingPackagesPayments,
+  getHearsPackagesForPendingPackagesPayments,
+  approveOrRejectPendingHeartsPackagesPayments,
 };

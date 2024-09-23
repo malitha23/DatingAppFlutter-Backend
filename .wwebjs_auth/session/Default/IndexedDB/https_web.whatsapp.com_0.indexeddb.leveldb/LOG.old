@@ -1,50 +1,27 @@
-2024/09/23-02:33:21.456 2230 Reusing MANIFEST F:\github\love-birds-backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
-2024/09/23-02:33:21.459 2230 Recovering log #7711
-2024/09/23-02:33:21.530 2230 Reusing old log F:\github\love-birds-backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/007711.log 
-2024/09/23-02:33:24.018 6610 Level-0 table #7722: started
-2024/09/23-02:33:24.112 6610 Level-0 table #7722: 195346 bytes OK
-2024/09/23-02:33:24.152 6610 Delete type=0 #7711
-2024/09/23-02:33:24.153 6610 Manual compaction at level-0 from ' \x89\x03\x00\x00\x00' @ 72057594037927935 : 1 .. ' \x8a\x03\x00\x00\x00' @ 0 : 0; will stop at ' \x89\x03\x00\x00\x05' @ 20433965 : 1
-2024/09/23-02:33:24.153 6610 Compacting 1@0 + 2@1 files
-2024/09/23-02:33:24.251 6610 Generated table #7723@0: 4400 keys, 88066 bytes
-2024/09/23-02:33:24.906 6610 Generated table #7724@0: 52 keys, 4017 bytes
-2024/09/23-02:33:25.128 6610 Generated table #7725@0: 307 keys, 7641 bytes
-2024/09/23-02:33:25.128 6610 Compacted 1@0 + 2@1 files => 99724 bytes
-2024/09/23-02:33:25.194 6610 compacted to: files[ 0 3 52 0 0 0 0 ]
-2024/09/23-02:33:25.195 6610 Delete type=2 #7722
-2024/09/23-02:33:25.196 2c28 Manual compaction at level-0 from ' \x89\x03\x00\x00\x05' @ 20433965 : 1 .. ' \x8a\x03\x00\x00\x00' @ 0 : 0; will stop at (end)
-2024/09/23-02:33:29.267 2c28 Compacting 1@1 + 3@2 files
-2024/09/23-02:33:29.835 2c28 Generated table #7726@1: 79129 keys, 2241843 bytes
-2024/09/23-02:33:30.320 2c28 Generated table #7727@1: 49329 keys, 2206632 bytes
-2024/09/23-02:33:30.852 2c28 Generated table #7728@1: 30408 keys, 2185311 bytes
-2024/09/23-02:33:30.937 2c28 Generated table #7729@1: 22 keys, 20165 bytes
-2024/09/23-02:33:30.937 2c28 Compacted 1@1 + 3@2 files => 6653951 bytes
-2024/09/23-02:33:30.968 2c28 compacted to: files[ 0 2 53 0 0 0 0 ]
-2024/09/23-02:33:30.969 2c28 Delete type=2 #7714
-2024/09/23-02:33:30.969 2c28 Delete type=2 #7715
-2024/09/23-02:33:30.969 2c28 Delete type=2 #7716
-2024/09/23-02:33:30.969 2c28 Delete type=2 #7717
-2024/09/23-02:33:30.969 2c28 Delete type=2 #7718
-2024/09/23-02:33:30.969 2c28 Delete type=2 #7723
-2024/09/23-02:34:23.007 67bc Compacting 1@1 + 4@2 files
-2024/09/23-02:34:23.425 67bc Generated table #7730@1: 102523 keys, 2252703 bytes
-2024/09/23-02:34:23.894 67bc Generated table #7731@1: 104447 keys, 2256040 bytes
-2024/09/23-02:34:24.377 67bc Generated table #7732@1: 103229 keys, 2254000 bytes
-2024/09/23-02:34:24.770 67bc Generated table #7733@1: 97807 keys, 2135276 bytes
-2024/09/23-02:34:24.770 67bc Compacted 1@1 + 4@2 files => 8898019 bytes
-2024/09/23-02:34:24.794 67bc compacted to: files[ 0 1 53 0 0 0 0 ]
-2024/09/23-02:34:24.795 67bc Delete type=2 #7544
-2024/09/23-02:34:24.796 67bc Delete type=2 #7545
-2024/09/23-02:34:24.796 67bc Delete type=2 #7546
-2024/09/23-02:34:24.796 67bc Delete type=2 #7547
-2024/09/23-02:34:24.796 67bc Delete type=2 #7725
-2024/09/23-02:43:23.243 2e44 Compacting 1@1 + 3@2 files
-2024/09/23-02:43:24.672 2e44 Generated table #7734@1: 31287 keys, 2245501 bytes
-2024/09/23-02:43:25.399 2e44 Generated table #7735@1: 11378 keys, 2171260 bytes
-2024/09/23-02:43:25.648 2e44 Generated table #7736@1: 2439 keys, 484582 bytes
-2024/09/23-02:43:25.648 2e44 Compacted 1@1 + 3@2 files => 4901343 bytes
-2024/09/23-02:43:25.700 2e44 compacted to: files[ 0 0 53 0 0 0 0 ]
-2024/09/23-02:43:25.702 2e44 Delete type=2 #7596
-2024/09/23-02:43:25.703 2e44 Delete type=2 #7600
-2024/09/23-02:43:25.703 2e44 Delete type=2 #7627
-2024/09/23-02:43:25.704 2e44 Delete type=2 #7724
+2024/09/24-02:06:42.163 49ac Reusing MANIFEST F:\github\love-birds-backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2024/09/24-02:06:42.169 49ac Recovering log #8381
+2024/09/24-02:06:42.318 49ac Reusing old log F:\github\love-birds-backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/008381.log 
+2024/09/24-02:06:44.917 938 Level-0 table #8393: started
+2024/09/24-02:06:45.039 938 Level-0 table #8393: 294119 bytes OK
+2024/09/24-02:06:45.118 938 Delete type=0 #8381
+2024/09/24-02:06:45.119 18f4 Manual compaction at level-0 from ' \xad\x03\x00\x00\x00' @ 72057594037927935 : 1 .. ' \xae\x03\x00\x00\x00' @ 0 : 0; will stop at (end)
+2024/09/24-02:06:53.218 938 Compacting 1@1 + 8@2 files
+2024/09/24-02:06:53.820 938 Generated table #8394@1: 48159 keys, 2205150 bytes
+2024/09/24-02:06:54.256 938 Generated table #8395@1: 61877 keys, 2228890 bytes
+2024/09/24-02:06:54.486 938 Generated table #8396@1: 2588 keys, 2148374 bytes
+2024/09/24-02:06:54.709 938 Generated table #8397@1: 2454 keys, 2156658 bytes
+2024/09/24-02:06:55.071 938 Generated table #8398@1: 18565 keys, 2222340 bytes
+2024/09/24-02:06:55.452 938 Generated table #8399@1: 32691 keys, 2247145 bytes
+2024/09/24-02:06:55.799 938 Generated table #8400@1: 71302 keys, 2213765 bytes
+2024/09/24-02:06:55.970 938 Generated table #8401@1: 22412 keys, 492095 bytes
+2024/09/24-02:06:55.970 938 Compacted 1@1 + 8@2 files => 15914417 bytes
+2024/09/24-02:06:56.018 938 compacted to: files[ 0 0 8 0 0 0 0 ]
+2024/09/24-02:06:56.020 938 Delete type=2 #8383
+2024/09/24-02:06:56.020 938 Delete type=2 #8384
+2024/09/24-02:06:56.020 938 Delete type=2 #8385
+2024/09/24-02:06:56.020 938 Delete type=2 #8386
+2024/09/24-02:06:56.020 938 Delete type=2 #8387
+2024/09/24-02:06:56.020 938 Delete type=2 #8388
+2024/09/24-02:06:56.020 938 Delete type=2 #8389
+2024/09/24-02:06:56.020 938 Delete type=2 #8390
+2024/09/24-02:06:56.020 938 Delete type=2 #8393

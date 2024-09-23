@@ -32,6 +32,31 @@ router.post("/approveOrrejectPendingPackagesPayments", async (req, res, next) =>
     }
 });
 
+
+router.get("/pending-Heartspackages-payments", async (req, res, next) => {
+    try {
+        await adminController.getHeartsPackagesPendingPayments (req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
+router.post("/getHearsPackagesForPendingPackagesPayments", async (req, res, next) => {
+    try {
+        await adminController.getHearsPackagesForPendingPackagesPayments (req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
+router.post("/approveOrRejectPendingHeartsPackagesPayments", async (req, res, next) => {
+    try {
+        await adminController.approveOrRejectPendingHeartsPackagesPayments (req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+});
+
 // Admin routes
 router.get("/getAllNewUsers", async (req, res, next) => {
     try {
