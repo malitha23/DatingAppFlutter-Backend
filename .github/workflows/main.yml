@@ -21,6 +21,9 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
+    - name: Create SSH Directory
+      run: mkdir -p ~/.ssh
+
     - name: Add SSH Key
       run: |
         echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_ed25519
@@ -29,6 +32,12 @@ jobs:
     - name: Set up SSH known hosts
       run: |
         ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+    - name: Debug SSH Configuration
+      run: |
+        ls -la ~/.ssh
+        cat ~/.ssh/id_ed25519
+        cat ~/.ssh/known_hosts
 
     - name: Deploy to Server
       uses: appleboy/ssh-action@v0.1.3
