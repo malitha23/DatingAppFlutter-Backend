@@ -21,6 +21,12 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
+    - name: Create SSH directory
+      run: |
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        echo "SSH directory created."
+
     - name: Add SSH Key
       run: |
         echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_rsa
