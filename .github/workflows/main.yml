@@ -21,6 +21,9 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
+    - name: Create SSH Directory
+      run: mkdir -p ~/.ssh
+
     - name: Add SSH Key
       run: |
         echo "${{ secrets.SERVER_SSH_KEY }}" | base64 --decode > ~/.ssh/id_rsa
@@ -28,7 +31,6 @@ jobs:
 
     - name: Set GitHub SSH Key for the server
       run: ssh-keyscan github.com >> ~/.ssh/known_hosts
-      shell: bash
 
     - name: Deploy to Server
       uses: appleboy/ssh-action@v0.1.3
