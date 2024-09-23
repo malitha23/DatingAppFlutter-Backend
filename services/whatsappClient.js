@@ -16,12 +16,12 @@ const client = new Client({
 // Event listeners
 client.on('qr', (qr) => {
   qrCode = qr;
-  console.log('QR code received.');
+  console.log('Whatsapp QR code received.');
 });
 
 client.on('authenticated', () => {
   isAuthenticated = true;
-  console.log('Authenticated successfully.');
+  console.log('Whatsapp Authenticated successfully.');
 });
 
 client.on('ready', () => {
@@ -104,7 +104,7 @@ const handleClientReinitialization = async () => {
     isReinitializing = true;
     try {
       await resetClient(); // Reset and reinitialize the client
-      console.log('Client reinitialized successfully.');
+      console.log('Whatsapp Client reinitialized successfully.');
     } catch (error) {
       console.error('Error during client reinitialization:', error);
     } finally {
@@ -119,7 +119,7 @@ const resetClient = async () => {
   isAuthenticated = false; // Reset authentication state
   try {
     await client.destroy(); // Destroy the current instance
-    console.log('Client destroyed. Reinitializing...');
+    console.log('Whatsapp Client destroyed. Reinitializing...');
     await client.initialize(); // Reinitialize the client
   } catch (error) {
     console.error('Error during resetClient:', error);
