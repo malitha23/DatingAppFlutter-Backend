@@ -33,7 +33,7 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script: |
           echo "Changing directory to the project..."
-          cd /var/www/lovebird4u.com/new
+          cd /var/www/lovebird4u.com/new/DatingAppFlutter-Backend
           echo "Pulling latest changes from GitHub..."
           git pull origin main
           echo "Installing npm dependencies..."
