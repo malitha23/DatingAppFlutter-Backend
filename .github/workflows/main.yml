@@ -16,8 +16,8 @@ jobs:
       with:
         node-version: '20'
 
-    # - name: Install Dependencies
-    #   run: npm install
+    - name: Install Dependencies
+      run: npm install
 
     # - name: Debug SSH Connection
     #   run: |
