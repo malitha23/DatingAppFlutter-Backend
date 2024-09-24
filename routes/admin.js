@@ -33,7 +33,7 @@ router.post("/approveOrrejectPendingPackagesPayments", async (req, res, next) =>
 });
 
 
-router.get("/pending-Heartspackages-payments", async (req, res, next) => {
+router.get("/ppending-Heartspackages-payments", async (req, res, next) => {
     try {
         await adminController.getHeartsPackagesPendingPayments (req, res);
     } catch (err) {
