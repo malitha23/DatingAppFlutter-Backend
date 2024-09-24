@@ -10,44 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '20'
-
-    - name: Install Dependencies
-      run: npm install
-
-    - name: Create SSH Directory
-      run: mkdir -p ~/.ssh
-
-    - name: Add SSH Key
-      run: |
-        echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-
-    - name: Set up SSH known hosts
-      run: |
-        ssh-keyscan github.com >> ~/.ssh/known_hosts
-
-    - name: Debug SSH Configuration
-      run: |
-        ls -la ~/.ssh
-        cat ~/.ssh/id_ed25519
-        cat ~/.ssh/known_hosts
-
-    - name: Deploy to Server
-      uses: appleboy/ssh-action@v0.1.3
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ~/.ssh/id_ed25519
-        script: |
-          cd /var/www/lovebird4u.com/DatingAppFlutter-Backend
-          git pull origin main
-          npm install
-          pm2 restart lovebird-backend
-          pm2 save
+      - name: Run SSH commands
+        uses: appleboy/ssh-action@v0.1.3
+        with:
+          host: ${{ secrets.SERVER_IP }}      # Server IP or hostname
+          username: ${{ secrets.SSH_USERNAME }} # Your server username
+          key: ${{ secrets.SSH_PRIVATE_KEY }}   # Your private key
+          script: |
+            cd /var/www/lovebird4u.com/DatingAppFlutter-Backend
+            git pull origin main
+            npm install
+            pm2 restart lovebird-backend
+            pm2 save
