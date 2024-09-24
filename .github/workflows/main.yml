@@ -1,5 +1,3 @@
-name: Deploy to Server
-
 on:
   push:
     branches:
@@ -11,15 +9,20 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Setup Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
         node-version: '20'
 
     - name: Install Dependencies
       run: npm install
+
+    # - name: Debug SSH Connection
+    #   run: |
+    #     echo "Testing SSH connection to GitHub..."
+    #     ssh -vT git@github.com
 
     - name: Deploy to Server
       uses: appleboy/ssh-action@v0.1.3
@@ -29,8 +32,13 @@ jobs:
         key: ${{ secrets.SERVER_SSH_KEY }}
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script: |
+          echo "Changing directory to the project..."
           cd /var/www/lovebird4u.com/DatingAppFlutter-Backend
-          git pull
+          echo "Pulling latest changes from GitHub..."
+          git pull origin main
+          echo "Installing npm dependencies..."
           npm install
-          pm2 restart lovebird-backend # Restart your app using PM2 (or any other process manager)
+          echo "Restarting the application..."
+          pm2 restart lovebird-backend
+          echo "Saving PM2 process list..."
           pm2 save
