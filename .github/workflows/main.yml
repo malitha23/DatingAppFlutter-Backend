@@ -31,6 +31,7 @@ jobs:
         passphrase: ${{ secrets.SSH_PASSPHRASE }}
         script: |
           cd /var/www/lovebird4u.com/DatingAppFlutter-Backend
+          git remote add origin git@github.com:malitha23/DatingAppFlutter-Backend.git
           git pull origin main
           npm install
           pm2 restart lovebird-backend # Restart your app using PM2 (or any other process manager)
