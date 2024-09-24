@@ -1811,52 +1811,64 @@ const approveOrRejectPendingHeartsPackagesPayments = async (req, res) => {
     }
 
     // Update coin balance only if approved
-    if (approved === 1) {
-      const currentBalanceSql = `
-  SELECT coin_balance 
-  FROM coin_balance 
-  WHERE userId = ?`;
-
-      db.query(currentBalanceSql, [userId], (err, results) => {
-        if (err) {
-          console.error("Error fetching coin balance:", err);
-          return res
-            .status(500)
-            .json({ message: "Error fetching coin balance" });
-        }
-
-        if (results.length === 0) {
-          return res.status(404).json({ message: "User not found" });
-        }
-
-        const currentBalance = results[0].coin_balance;
-
-        // Calculate the new balance
-        const newBalance = currentBalance + packageaccordingHearts;
-
-        const coinBalanceUpdateSql = `
-    UPDATE coin_balance 
-    SET coin_balance = ? 
+    // Update coin balance only if approved
+if (approved === 1) {
+  const currentBalanceSql = `
+    SELECT coin_balance 
+    FROM coin_balance 
     WHERE userId = ?`;
 
-        db.query(
-          coinBalanceUpdateSql,
-          [newBalance, userId],
-          (updateErr, updateResults) => {
-            if (updateErr) {
-              console.error("Error updating coin balance:", updateErr);
-              return res
-                .status(500)
-                .json({ message: "Error updating coin balance" });
-            }
-
-            return res
-              .status(200)
-              .json({ message: "Coin balance updated successfully" });
-          }
-        );
-      });
+  db.query(currentBalanceSql, [userId], (err, results) => {
+    if (err) {
+      console.error("Error fetching coin balance:", err);
+      return res
+        .status(500)
+        .json({ message: "Error fetching coin balance" });
     }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const currentBalance = results[0].coin_balance;
+
+    // Log the current balance and packageaccordingHearts
+    console.log("Current Balance:", currentBalance);
+    console.log("Package Hearts:", packageaccordingHearts);
+
+    // Ensure packageaccordingHearts is a number
+    const heartsToAdd = Number(packageaccordingHearts);
+
+    // Calculate the new balance
+    const newBalance = currentBalance + heartsToAdd;
+
+    // Log the calculated new balance
+    console.log("New Balance:", newBalance);
+
+    const coinBalanceUpdateSql = `
+      UPDATE coin_balance 
+      SET coin_balance = ? 
+      WHERE userId = ?`;
+
+    db.query(
+      coinBalanceUpdateSql,
+      [newBalance, userId],
+      (updateErr, updateResults) => {
+        if (updateErr) {
+          console.error("Error updating coin balance:", updateErr);
+          return res
+            .status(500)
+            .json({ message: "Error updating coin balance" });
+        }
+
+        return res
+          .status(200)
+          .json({ message: "Coin balance updated successfully" });
+      }
+    );
+  });
+}
+
 
     // Construct message content
     const messageContent =
