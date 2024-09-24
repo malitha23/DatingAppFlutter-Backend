@@ -19,10 +19,10 @@ jobs:
     - name: Install Dependencies
       run: npm install
 
-    - name: Debug SSH Connection
-      run: |
-        echo "Testing SSH connection to GitHub..."
-        ssh -vT git@github.com
+    # - name: Debug SSH Connection
+    #   run: |
+    #     echo "Testing SSH connection to GitHub..."
+    #     ssh -vT git@github.com
 
     - name: Deploy to Server
       uses: appleboy/ssh-action@v0.1.3
