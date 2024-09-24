@@ -1649,7 +1649,7 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
     const numberDetails = await client.getNumberId(formattedWhatsAppNumber);
 
     if (!numberDetails) {
-      // Store the message attempt in the database since the WhatsApp account is not set
+      // Store the message attempt in the database since the WhatsApp account is not valid
       const insertSql = `
   INSERT INTO sent_messages (user_id, whatsapp_number, message_content, reason)
   VALUES (?, ?, ?, ?)`;
@@ -1695,6 +1695,7 @@ const approveOrRejectPendingPackagesPayments = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 const getHeartsPackagesPendingPayments = async (req, res) => {
   try {
