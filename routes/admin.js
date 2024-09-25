@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const adminController = require("../controllers/adminController.js");
 const adminControllerToOffers = require("../controllers/adminController_To_Offres.js");
+const admindashboardController = require("../controllers/admindashboardController.js");
 const adminMiddleware = require("../middlewares/adminMiddleware.js");
 const UserController = require("../controllers/UserController.js");
 
@@ -244,6 +245,24 @@ router.delete('/deleteReferralOfferForAdmin/:id', async (req, res) => {
 router.put("/updateReferralOfferForAdmin/:id", async (req, res, next) => {
     try {
         await adminControllerToOffers.updateReferralOffer(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+}); 
+
+/** Admin Dashboard  Setup routes -------------------------------------------------------------------------------------   **/
+
+router.get("/getadmindashboardpaymnetsdata", async (req, res, next) => {
+    try {
+        await admindashboardController.getDashboardPaymentsData(req, res);
+    } catch (err) {
+        next(err); // Pass the error to the error-handling middleware
+    }
+}); 
+
+router.post("/getDailyPackagePaymentsDataToChart", async (req, res, next) => {
+    try {
+        await admindashboardController.getDailyPackagePaymentsDataToChart(req, res);
     } catch (err) {
         next(err); // Pass the error to the error-handling middleware
     }
