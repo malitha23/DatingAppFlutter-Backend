@@ -5,116 +5,163 @@ const db = database.connection;
 
 // Get the start and end dates for the current month in Sri Lanka timezone
 const getCurrentMonthDateRange = () => {
-    // Get the current date and time in Sri Lanka timezone
-    const now = moment.tz("Asia/Colombo");
-    
-    // Set the start and end of the current month
-    const start = now.clone().startOf('month').toDate();
-    const end = now.clone().endOf('month').toDate();
-    return [start, end];
+  // Get the current date and time in Sri Lanka timezone
+  const now = moment.tz("Asia/Colombo");
+
+  // Set the start and end of the current month
+  const start = now.clone().startOf("month").toDate();
+  const end = now.clone().endOf("month").toDate();
+  return [start, end];
 };
 // Fetch dashboard data
 const getDashboardPaymentsData = (req, res) => {
-    const [startOfMonth, endOfMonth] = getCurrentMonthDateRange();
-    
-    const queries = [
-        // Overall totals
-        `SELECT 
-            SUM(price) AS total_approved_payments, 
-            COUNT(DISTINCT userId) AS total_users_paid
-         FROM packagesbuydata
-         WHERE approved = 1 
-           AND (payment_status = 1 OR payment_status = 0);`,
+  const [startOfMonth, endOfMonth] = getCurrentMonthDateRange();
 
-        `SELECT 
+  const queries = [
+    // Overall totals
+    `WITH FirstEntries AS (
+    SELECT MIN(id) AS first_id
+    FROM packagesbuydata
+    GROUP BY userId
+),
+EligiblePayments AS (
+    SELECT *
+    FROM packagesbuydata
+    WHERE id NOT IN (SELECT first_id FROM FirstEntries)
+)
+SELECT 
+    SUM(price) AS total_approved_payments, 
+    COUNT(DISTINCT userId) AS total_users_paid
+FROM EligiblePayments
+WHERE approved = 1 
+  AND (payment_status = 1 OR payment_status = 0)
+`,
+
+    `SELECT 
             SUM(total_price) AS total_approved_payments, 
             COUNT(DISTINCT userId) AS total_users_paid
          FROM heartsbuydata
          WHERE approved = 1;`,
 
-        // Current month totals
-        `SELECT 
-            SUM(price) AS total_approved_payments, 
-            COUNT(DISTINCT userId) AS total_users_paid
-         FROM packagesbuydata
-         WHERE approved = 1 
-           AND (payment_status = 1 OR payment_status = 0)
-           AND payment_date BETWEEN ? AND ?;`,
+    // Current month totals
+    `WITH FirstEntries AS (
+    SELECT MIN(id) AS first_id
+    FROM packagesbuydata
+    GROUP BY userId
+),
+EligiblePayments AS (
+    SELECT *
+    FROM packagesbuydata
+    WHERE id NOT IN (SELECT first_id FROM FirstEntries)
+)
+SELECT 
+    SUM(price) AS total_approved_payments, 
+    COUNT(DISTINCT userId) AS total_users_paid
+FROM EligiblePayments
+WHERE approved = 1 
+  AND (payment_status = 1 OR payment_status = 0)
+  AND payment_date BETWEEN ? AND ?;  -- Add date range condition here
+`,
 
-        `SELECT 
+    `SELECT 
             SUM(total_price) AS total_approved_payments, 
             COUNT(DISTINCT userId) AS total_users_paid
          FROM heartsbuydata
          WHERE approved = 1 
-           AND payment_date BETWEEN ? AND ?;`
-    ];
+           AND payment_date BETWEEN ? AND ?;`,
+  ];
 
-    const params = [
-        [], // Parameters for the first query
-        [], // Parameters for the second query
-        [startOfMonth, endOfMonth], // Parameters for the third query
-        [startOfMonth, endOfMonth] // Parameters for the fourth query
-    ];
+  const params = [
+    [], // Parameters for the first query
+    [], // Parameters for the second query
+    [startOfMonth, endOfMonth], // Parameters for the third query
+    [startOfMonth, endOfMonth], // Parameters for the fourth query
+  ];
 
-    // Execute all queries
-    Promise.all(queries.map((query, index) => {
-        return new Promise((resolve, reject) => {
-            db.query(query, params[index], (err, results) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(results[0]);
-                }
-            });
+  // Execute all queries
+  Promise.all(
+    queries.map((query, index) => {
+      return new Promise((resolve, reject) => {
+        db.query(query, params[index], (err, results) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(results[0]);
+          }
         });
-    }))
-    .then(results => {
-        const overallPackages = results[0];
-        const overallHearts = results[1];
-        const currentMonthPackages = results[2];
-        const currentMonthHearts = results[3];
-
-        const response = {
-            total: {
-                total_approved_payments: overallPackages.total_approved_payments+overallHearts.total_approved_payments || 0,
-                total_users_paid: overallPackages.total_users_paid+overallHearts.total_users_paid || 0
-            },
-            packagesbuydata: {
-                total_approved_payments: overallPackages.total_approved_payments || 0,
-                total_users_paid: overallPackages.total_users_paid || 0
-            },
-            heartsbuydata: {
-                total_approved_payments: overallHearts.total_approved_payments || 0,
-                total_users_paid: overallHearts.total_users_paid || 0
-            },
-            totalcurrentmonth: {
-                total_approved_payments: currentMonthPackages.total_approved_payments+currentMonthHearts.total_approved_payments || 0,
-                total_users_paid: currentMonthPackages.total_users_paid+currentMonthHearts.total_users_paid || 0
-            },
-            packagesbuydatacurrentmonth: {
-                total_approved_payments: currentMonthPackages.total_approved_payments || 0,
-                total_users_paid: currentMonthPackages.total_users_paid || 0
-            },
-            heartsbuydatacurrentmonth: {
-                total_approved_payments: currentMonthHearts.total_approved_payments || 0,
-                total_users_paid: currentMonthHearts.total_users_paid || 0
-            }
-        };
-
-        res.json(response);
+      });
     })
-    .catch(err => {
-        console.error('Error executing queries:', err);
-        res.status(500).json({ error: 'Internal server error' });
+  )
+    .then((results) => {
+      const overallPackages = results[0];
+      const overallHearts = results[1];
+      const currentMonthPackages = results[2];
+      const currentMonthHearts = results[3];
+
+      const response = {
+        total: {
+          total_approved_payments:
+            overallPackages.total_approved_payments +
+              overallHearts.total_approved_payments || 0,
+          total_users_paid:
+            overallPackages.total_users_paid + overallHearts.total_users_paid ||
+            0,
+        },
+        packagesbuydata: {
+          total_approved_payments: overallPackages.total_approved_payments || 0,
+          total_users_paid: overallPackages.total_users_paid || 0,
+        },
+        heartsbuydata: {
+          total_approved_payments: overallHearts.total_approved_payments || 0,
+          total_users_paid: overallHearts.total_users_paid || 0,
+        },
+        totalcurrentmonth: {
+          total_approved_payments:
+            currentMonthPackages.total_approved_payments +
+              currentMonthHearts.total_approved_payments || 0,
+          total_users_paid:
+            currentMonthPackages.total_users_paid +
+              currentMonthHearts.total_users_paid || 0,
+        },
+        packagesbuydatacurrentmonth: {
+          total_approved_payments:
+            currentMonthPackages.total_approved_payments || 0,
+          total_users_paid: currentMonthPackages.total_users_paid || 0,
+        },
+        heartsbuydatacurrentmonth: {
+          total_approved_payments:
+            currentMonthHearts.total_approved_payments || 0,
+          total_users_paid: currentMonthHearts.total_users_paid || 0,
+        },
+      };
+
+      res.json(response);
+    })
+    .catch((err) => {
+      console.error("Error executing queries:", err);
+      res.status(500).json({ error: "Internal server error" });
     });
 };
 
 const getDailyPackagePaymentsDataToChart = (req, res) => {
-    const startDate = '2024-09-01';
-    const endDate = '2024-09-30';
+  const [startDate, endDate] = getCurrentMonthDateRange();
 
-    // Define the SQL query
-    const query = `
+  // Format dates for SQL query
+  const formattedStartDate = moment(startDate).format("YYYY-MM-DD");
+  const formattedEndDate = moment(endDate).format("YYYY-MM-DD");
+
+  // Define the SQL query with CTE for excluding the first entry for each userId
+  const query = `
+        WITH FirstEntries AS (
+            SELECT MIN(id) AS first_id
+            FROM packagesbuydata
+            GROUP BY userId
+        ),
+        EligiblePayments AS (
+            SELECT *
+            FROM packagesbuydata
+            WHERE id NOT IN (SELECT first_id FROM FirstEntries)
+        )
         SELECT 
             DATE_FORMAT(date_table.payment_date, '%Y-%m-%d') AS day_of_month,
             COALESCE(SUM(p.price), 0) AS total_approved_payments
@@ -131,7 +178,7 @@ const getDailyPackagePaymentsDataToChart = (req, res) => {
              WHERE 
                  DATE_ADD(?, INTERVAL seq DAY) BETWEEN ? AND ?) AS date_table
         LEFT JOIN 
-            packagesbuydata p ON DATE(p.payment_date) = DATE(date_table.payment_date)
+            EligiblePayments p ON DATE(p.payment_date) = DATE(date_table.payment_date)
             AND p.approved = 1 
             AND (p.payment_status = 1 OR p.payment_status = 0)
         GROUP BY 
@@ -140,23 +187,33 @@ const getDailyPackagePaymentsDataToChart = (req, res) => {
             day_of_month;
     `;
 
-    // Execute the query with parameters
-    db.query(query, [startDate, startDate, startDate, endDate], (err, results) => {
-        if (err) {
-            console.error('Error executing query:', err);
-            return res.status(500).json({ error: 'Internal server error' });
-        }
+  // Execute the query with parameters
+  db.query(
+    query,
+    [
+      formattedStartDate,
+      formattedStartDate,
+      formattedStartDate,
+      formattedEndDate,
+    ],
+    (err, results) => {
+      if (err) {
+        console.error("Error executing query:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
 
-        // Process results and send response
-        const response = results.map(row => ({
-            day_of_month: row.day_of_month,
-            total_approved_payments: row.total_approved_payments
-        }));
+      // Process results and send response
+      const response = results.map((row) => ({
+        day_of_month: row.day_of_month,
+        total_approved_payments: row.total_approved_payments,
+      }));
 
-        res.json(response);
-    });
+      res.json(response);
+    }
+  );
 };
 
-
-
-module.exports = { getDashboardPaymentsData, getDailyPackagePaymentsDataToChart }; // Corrected to export getDashboardPaymentsData
+module.exports = {
+  getDashboardPaymentsData,
+  getDailyPackagePaymentsDataToChart,
+}; // Corrected to export getDashboardPaymentsData
