@@ -30,7 +30,6 @@ const getPackagesPaymentData = async (req, res) => {
     // Extract token from the request headers
     const token = req.headers.authorization;
 
-    // Verify the token
     const decoded = verifyToken(token);
     if (!decoded) {
       return res.status(401).json({ message: "Unauthorized" });
